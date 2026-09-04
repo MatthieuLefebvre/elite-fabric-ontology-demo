@@ -1,0 +1,26 @@
+name: Adjustment
+table: adjustments
+key: adjustment_id
+display_name: adjustment_id
+description: >-
+  A positive, fee-only reduction recorded once at exactly one stage with exactly one
+  corresponding target. Time-entry reductions precede draft gross; proforma write-downs
+  reduce issued fees; invoice write-offs reduce recoverable receivables without changing
+  issued realization. Trace exclusive targets to the issued cohort before comparing
+  stage and reason rates; never count a document's discount again as another adjustment.
+properties:
+  adjustment_id: {column: adjustment_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  type: {column: type, type: string, expression: "CASE stage WHEN 'time_entry' THEN 'time_reduction' WHEN 'proforma' THEN 'write_down' WHEN 'invoice' THEN 'write_off' END"}
+  amount_cents: {column: amount_cents, type: long}
+  amount: {column: amount, type: 'decimal(18,2)', expression: 'CAST(amount_cents AS DECIMAL(20,0)) / 100'}
+  reason_code: {column: reason_code, type: string}
+  approver_id: {column: approver_id, type: string}
+  stage: {column: stage, type: string}
+  time_entry_id: {column: time_entry_id, type: string}
+  proforma_id: {column: proforma_id, type: string}
+  invoice_id: {column: invoice_id, type: string}
+  matter_id: {column: matter_id, type: string}
+  currency: {column: currency, type: string}
+  adjusted_on: {column: adjusted_on, type: date}
+  provenance_key: {column: provenance_key, type: string}

@@ -1,0 +1,14 @@
+name: LegalEntity
+table: legal_entities
+key: legal_entity_id
+display_name: entity_code
+description: >-
+  The firm entity that issues the bill in a jurisdiction and functional currency.
+  This demo's matter currency agrees with the billing entity currency. A functional
+  currency is not permission to convert or combine amounts from other currencies.
+properties:
+  legal_entity_id: {column: legal_entity_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  entity_code: {column: entity_code, source_column: legal_entity_id, type: string}
+  jurisdiction: {column: jurisdiction, type: string}
+  functional_currency: {column: functional_currency, source_column: currency, type: string}

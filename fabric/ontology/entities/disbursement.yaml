@@ -1,0 +1,21 @@
+name: Disbursement
+table: disbursements
+key: disbursement_id
+display_name: disbursement_id
+description: >-
+  A dated third-party cost on a matter. Only recoverable costs belong in billable WIP.
+  Costs follow the draft and invoice lifecycle but are excluded from fee realization
+  and fee-only adjustments; never count a cost again by adding its draft total.
+properties:
+  disbursement_id: {column: disbursement_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  type: {column: type, type: string}
+  amount_cents: {column: amount_cents, type: long}
+  amount: {column: amount, type: 'decimal(18,2)', expression: 'CAST(amount_cents AS DECIMAL(20,0)) / 100'}
+  vendor: {column: vendor, type: string}
+  recoverable_flag: {column: recoverable_flag, type: boolean}
+  matter_id: {column: matter_id, type: string}
+  date: {column: date, source_column: incurred_on, type: date}
+  proforma_id: {column: proforma_id, type: string}
+  invoice_id: {column: invoice_id, type: string}
+  currency: {column: currency, type: string}

@@ -1,0 +1,14 @@
+name: PracticeGroup
+table: practice_groups
+key: practice_group_id
+display_name: name
+description: >-
+  The legal discipline responsible for delivering a matter, such as litigation or
+  corporate. Group performance aggregates authorized matters, not every matter in
+  the firm; the group head is an organizational role rather than an access grant.
+properties:
+  practice_group_id: {column: practice_group_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  code: {column: code, source_column: practice_group_id, type: string}
+  name: {column: name, source_column: practice_group_name, type: string}
+  group_head_id: {column: group_head_id, type: string}

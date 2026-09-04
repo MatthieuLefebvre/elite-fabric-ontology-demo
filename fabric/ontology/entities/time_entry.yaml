@@ -1,0 +1,28 @@
+name: TimeEntry
+table: time_entries
+key: time_entry_id
+display_name: time_entry_id
+description: >-
+  One dated unit of work, priced at the negotiated rate before review reductions.
+  value_cents and standard_value_cents preserve exact negotiated and standard amounts.
+  Draft allocation alone does not remove work from WIP: only an issued invoice does.
+  Phase supports budget comparison without multiplying rows across whole-matter plans.
+properties:
+  time_entry_id: {column: time_entry_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  date: {column: date, source_column: work_date, type: date}
+  hours: {column: hours, type: 'decimal(10,2)'}
+  rate_cents: {column: rate_cents, type: long}
+  rate: {column: rate, type: 'decimal(18,2)', expression: 'CAST(rate_cents AS DECIMAL(20,0)) / 100'}
+  value_cents: {column: value_cents, type: long}
+  value: {column: value, type: 'decimal(18,2)', expression: 'CAST(value_cents AS DECIMAL(20,0)) / 100'}
+  standard_value_cents: {column: standard_value_cents, type: long}
+  narrative: {column: narrative, type: string}
+  billable_flag: {column: billable_flag, type: boolean}
+  status: {column: status, type: string}
+  matter_id: {column: matter_id, type: string}
+  timekeeper_id: {column: timekeeper_id, type: string}
+  proforma_id: {column: proforma_id, type: string}
+  invoice_id: {column: invoice_id, type: string}
+  currency: {column: currency, type: string}
+  phase: {column: phase, type: string}

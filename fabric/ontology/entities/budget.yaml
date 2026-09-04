@@ -1,0 +1,21 @@
+name: Budget
+table: budgets
+key: budget_id
+display_name: budget_id
+description: >-
+  The approved full-quarter fees and hours for one matter, phase and currency. Actuals
+  run from quarter start through the daily snapshot, at recorded negotiated time value
+  before reductions and excluding costs. Positive variance is over budget. Do not
+  prorate the plan silently or mix overlapping whole-matter and phase plans.
+properties:
+  budget_id: {column: budget_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  period: {column: period, type: string, expression: "concat(year(period_start), '-Q', quarter(period_start))"}
+  phase: {column: phase, type: string}
+  budgeted_hours: {column: budgeted_hours, source_column: hours_budget, type: 'decimal(10,2)'}
+  budgeted_fees_cents: {column: budgeted_fees_cents, source_column: fee_budget_cents, type: long}
+  budgeted_fees: {column: budgeted_fees, type: 'decimal(18,2)', expression: 'CAST(fee_budget_cents AS DECIMAL(20,0)) / 100'}
+  matter_id: {column: matter_id, type: string}
+  currency: {column: currency, type: string}
+  period_start: {column: period_start, type: date}
+  period_end_exclusive: {column: period_end_exclusive, type: date}

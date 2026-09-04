@@ -1,0 +1,21 @@
+name: BillingGuideline
+table: billing_guidelines
+key: billing_guideline_id
+display_name: rule_type
+description: >-
+  A client's outside-counsel rule, scoped to currency and an explicit effective interval.
+  Threshold units follow rule_type: payment-term days or fee-cap major currency units.
+  Invoice applicability and recorded compliance come from invoice_guidelines, not an
+  inference that every invoice satisfied a rule merely because an edge exists.
+properties:
+  billing_guideline_id: {column: billing_guideline_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  client_id: {column: client_id, type: string}
+  rule_type: {column: rule_type, type: string}
+  threshold: {column: threshold, type: 'decimal(18,2)'}
+  effective_from: {column: effective_from, type: date}
+  effective_to: {column: effective_to, type: date}
+  currency: {column: currency, type: string}
+  fee_cap_cents: {column: fee_cap_cents, type: long}
+  payment_terms_days: {column: payment_terms_days, type: long}
+  guideline_text: {column: guideline_text, type: string}

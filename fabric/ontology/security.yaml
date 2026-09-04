@@ -1,0 +1,52 @@
+security:
+  description: >-
+    Enforce caller identity and tenant isolation before any traversal, search, projection
+    or aggregation. A known caller sees only explicitly granted matters without a
+    screened decision. Deny wins, unknown effects deny, and missing identity or grants
+    deny. Partner roles, client relationships and parent matters never grant access.
+  policy: explicit_grants_minus_screens
+  enforcement: external_required_not_deployed_by_ontology
+  identity: >-
+    Map the authenticated principal to (firm_id, timekeeper_id) in a trusted boundary.
+    Never accept those values from conversational text as proof of identity.
+  access_entity: MatterAccess
+  access_type_values: [granted, screened]
+  source_effect_mapping: {grant: granted, deny: screened, unknown: screened}
+  denial_message: Matter unavailable or access denied
+  scope: >-
+    Secure matters and all dependent time, costs, drafts, invoices, payments, adjustments,
+    budgets, access decisions and relationship edge tables. Restrict client, guideline,
+    partner and practice navigation to authorized matter paths. Do not leak existence,
+    counts, names, narratives, sources, totals or canaries from screened or other-firm rows.
+  authorization_sql: |
+    SELECT m.firm_id, m.matter_id
+    FROM matters m
+    WHERE m.firm_id = :firm_id
+      AND EXISTS (
+        SELECT 1 FROM timekeepers t
+        WHERE t.firm_id = :firm_id AND t.timekeeper_id = :timekeeper_id
+      )
+      AND EXISTS (
+        SELECT 1 FROM matter_access a
+        WHERE a.firm_id = m.firm_id AND a.matter_id = m.matter_id
+          AND a.timekeeper_id = :timekeeper_id AND a.access_type = 'granted'
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM matter_access a
+        WHERE a.firm_id = m.firm_id AND a.matter_id = m.matter_id
+          AND a.timekeeper_id = :timekeeper_id
+          AND (a.access_type IS NULL OR a.access_type <> 'granted')
+      )
+  deployment_gate: >-
+    Do not bind confidential Gold into an ontology or agent until live tests demonstrate
+    caller-specific enforcement through OneLake, shortcuts, ontology traversal and the
+    chosen agent query path. Prompt instructions, adjacency and tenant workspaces alone
+    are not a partner-level security boundary. Never silently use a broad service identity.
+  tests_required:
+    - Concurrent granted and screened decisions must deny access.
+    - Missing and unknown callers or effects must fail closed.
+    - No role-based or parent-to-child implicit grants.
+    - A denied matter returns the same response as an unavailable matter.
+    - Filter before grouping and joining so hidden rows cannot alter visible totals.
+    - Direct table, edge traversal and agent canary probes must all refuse screened content.
+    - A second firm uses distinct physical bindings without any cross-tenant row visibility.

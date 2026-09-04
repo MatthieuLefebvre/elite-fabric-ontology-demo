@@ -1,0 +1,25 @@
+name: Matter
+table: matters
+key: matter_id
+display_name: name
+description: >-
+  A separately managed and billed legal engagement: the anchor for work, budgets,
+  bills and authorization. Responsible, billing and originating partners are different
+  roles. A child can roll up to its parent only when explicitly requested and authorized;
+  a parent's access grant never confers access to children.
+properties:
+  matter_id: {column: matter_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  matter_number: {column: matter_number, source_column: matter_id, type: string}
+  name: {column: name, source_column: matter_name, type: string}
+  client_id: {column: client_id, type: string}
+  practice_group_id: {column: practice_group_id, type: string}
+  legal_entity_id: {column: legal_entity_id, type: string}
+  arrangement_type: {column: arrangement_type, source_column: fee_arrangement, type: string}
+  open_date: {column: open_date, source_column: opened_on, type: date}
+  status: {column: status, type: string}
+  parent_matter_id: {column: parent_matter_id, type: string}
+  responsible_partner_id: {column: responsible_partner_id, type: string}
+  billing_partner_id: {column: billing_partner_id, type: string}
+  originating_partner_id: {column: originating_partner_id, type: string}
+  currency: {column: currency, type: string}

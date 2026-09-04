@@ -1,0 +1,16 @@
+name: MatterAccess
+table: matter_access
+key: matter_access_id
+display_name: access_type
+description: >-
+  A first-class access decision linking a timekeeper and a matter. granted records an
+  explicit grant; screened records a deny, including unknown source effects, and wins
+  over any concurrent grant. This business evidence does NOT enforce Fabric, OneLake
+  or agent authorization. Screened records themselves are sensitive security metadata.
+properties:
+  matter_access_id: {column: matter_access_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  timekeeper_id: {column: timekeeper_id, type: string}
+  matter_id: {column: matter_id, type: string}
+  access_type: {column: access_type, type: string, expression: "CASE WHEN effect = 'grant' THEN 'granted' ELSE 'screened' END"}
+  reason: {column: reason, type: string}

@@ -1,0 +1,311 @@
+description: >-
+  Seven portable business measures, not native Fabric ontology measures. SQL runs on
+  Gold original source columns retained alongside aliases. Security is applied before
+  joining or aggregation. Snapshot date comes from manifest.as_of, never the wall clock.
+parameters:
+  firm_id: Trusted caller firm, not a prompt-supplied identity.
+  timekeeper_id: Trusted authenticated caller mapping.
+  as_of: Dataset manifest date, inclusive daily cutoff.
+  cohort_start: Inclusive first day of an invoice-issued calendar month.
+  cohort_end: Exclusive first day of the following invoice-issued calendar month.
+  matter_id: Optional single-matter scope; bind NULL for all authorized matters; excludes children.
+  practice_group_id: Optional practice filter; bind NULL for all authorized practices.
+  responsible_partner_id: Optional responsible-partner filter; bind NULL to omit, never substitute billing or originating partner.
+conventions:
+  grain: Never join multiple fact collections before preaggregating at their declared keys.
+  currency: Group by firm_id and currency; no FX and no mixed-currency totals.
+  ratios: Ratio of sums, not average of ratios; return NULL for a zero denominator.
+  snapshot: Current status is valid only for this dataset snapshot, not retrospective ledger replay.
+  exactness: Compute in cents and decimal arithmetic; round only for presentation.
+  authorization: The SQL is defense in depth, not a replacement for verified runtime access control.
+  intervals: Work and cash dates through as_of inclusive; issued cohorts start inclusive and end exclusive.
+  comparison: Compare adjacent complete issued-month cohorts at the same snapshot and currency, with identical authorized scope.
+common_ctes: |
+  authorized_matter_ids AS (
+    {authorization_sql}
+  ),
+  s_matters AS (
+    SELECT m.* FROM matters m
+    JOIN authorized_matter_ids a ON a.firm_id = m.firm_id AND a.matter_id = m.matter_id
+    WHERE (:matter_id IS NULL OR m.matter_id = :matter_id)
+      AND (:practice_group_id IS NULL OR m.practice_group_id = :practice_group_id)
+      AND (:responsible_partner_id IS NULL OR m.responsible_partner_id = :responsible_partner_id)
+  ),
+  s_time_entries AS (
+    SELECT e.* FROM time_entries e
+    JOIN s_matters m ON m.firm_id = e.firm_id AND m.matter_id = e.matter_id
+  ),
+  s_disbursements AS (
+    SELECT d.* FROM disbursements d
+    JOIN s_matters m ON m.firm_id = d.firm_id AND m.matter_id = d.matter_id
+  ),
+  s_proformas AS (
+    SELECT p.* FROM proformas p
+    JOIN s_matters m ON m.firm_id = p.firm_id AND m.matter_id = p.matter_id
+  ),
+  s_invoices AS (
+    SELECT i.*, m.practice_group_id FROM invoices i
+    JOIN s_matters m ON m.firm_id = i.firm_id AND m.matter_id = i.matter_id
+    WHERE i.status = 'issued' AND i.issued_on <= :as_of
+  ),
+  s_payments AS (
+    SELECT p.* FROM payments p
+    JOIN s_matters m ON m.firm_id = p.firm_id AND m.matter_id = p.matter_id
+    WHERE p.paid_on <= :as_of
+  ),
+  s_adjustments AS (
+    SELECT a.* FROM adjustments a
+    JOIN s_matters m ON m.firm_id = a.firm_id AND m.matter_id = a.matter_id
+    WHERE a.adjusted_on <= :as_of
+  ),
+  s_budgets AS (
+    SELECT b.* FROM budgets b
+    JOIN s_matters m ON m.firm_id = b.firm_id AND m.matter_id = b.matter_id
+  ),
+  wip_entries AS (
+    SELECT e.* FROM s_time_entries e
+    LEFT ANTI JOIN s_invoices i ON i.firm_id = e.firm_id
+      AND i.invoice_id = e.invoice_id AND i.matter_id = e.matter_id AND i.currency = e.currency
+    WHERE e.work_date <= :as_of AND e.billable_flag = true
+  ),
+  wip_costs AS (
+    SELECT d.* FROM s_disbursements d
+    LEFT ANTI JOIN s_invoices i ON i.firm_id = d.firm_id
+      AND i.invoice_id = d.invoice_id AND i.matter_id = d.matter_id AND i.currency = d.currency
+    WHERE d.incurred_on <= :as_of AND d.recoverable_flag = true
+  ),
+  cohort_invoices AS (
+    SELECT i.*, date_format(i.issued_on, 'yyyy-MM') AS issued_month FROM s_invoices i
+    WHERE i.issued_on >= :cohort_start AND i.issued_on < :cohort_end
+  ),
+  mapped_adjustments AS (
+    SELECT a.*, e.invoice_id AS cohort_invoice_id FROM s_adjustments a
+    JOIN s_time_entries e ON e.firm_id = a.firm_id AND e.time_entry_id = a.time_entry_id
+      AND e.matter_id = a.matter_id AND e.currency = a.currency
+    WHERE a.stage = 'time_entry' AND a.time_entry_id IS NOT NULL
+      AND a.proforma_id IS NULL AND a.invoice_id IS NULL
+    UNION ALL
+    SELECT a.*, p.invoice_id AS cohort_invoice_id FROM s_adjustments a
+    JOIN s_proformas p ON p.firm_id = a.firm_id AND p.proforma_id = a.proforma_id
+      AND p.matter_id = a.matter_id AND p.currency = a.currency
+    WHERE a.stage = 'proforma' AND a.proforma_id IS NOT NULL
+      AND a.time_entry_id IS NULL AND a.invoice_id IS NULL
+    UNION ALL
+    SELECT a.*, a.invoice_id AS cohort_invoice_id FROM s_adjustments a
+    WHERE a.stage = 'invoice' AND a.invoice_id IS NOT NULL
+      AND a.time_entry_id IS NULL AND a.proforma_id IS NULL
+  )
+measures:
+  - name: unbilled_wip
+    description: >-
+      Billable negotiated time value plus recoverable costs not yet on an issued invoice
+      at the daily snapshot, including work already allocated to unconverted drafts.
+      Count each activity once, at its recorded value before review reductions; do not
+      add draft totals. This is gross operational WIP, not net draft value or receivables.
+    grain: firm, matter, currency, snapshot
+    unit: cents; divide the final total by 100 for major currency units
+    expression: SUM(time_value_cents) + SUM(recoverable_disbursement_cents)
+    source_entities: [TimeEntry, Disbursement, Invoice, Matter]
+    sql: |
+      SELECT m.firm_id, m.matter_id, m.currency,
+        COALESCE(SUM(w.time_cents), 0) AS unbilled_time_cents,
+        COALESCE(SUM(w.cost_cents), 0) AS unbilled_disbursement_cents,
+        COALESCE(SUM(w.time_cents), 0) + COALESCE(SUM(w.cost_cents), 0) AS unbilled_wip_cents
+      FROM s_matters m
+      LEFT JOIN (
+        SELECT firm_id, matter_id, currency,
+          CAST(value_cents AS DECIMAL(38,0)) AS time_cents,
+          CAST(0 AS DECIMAL(38,0)) AS cost_cents FROM wip_entries
+        UNION ALL
+        SELECT firm_id, matter_id, currency, CAST(0 AS DECIMAL(38,0)),
+          CAST(amount_cents AS DECIMAL(38,0)) FROM wip_costs
+      ) w ON w.firm_id = m.firm_id AND w.matter_id = m.matter_id AND w.currency = m.currency
+      GROUP BY m.firm_id, m.matter_id, m.currency
+    comparison_note: >-
+      The generator's aged_wip golden uses status=unbilled and excludes drafts. This
+      portable metric deliberately includes drafts; compare matched subsets, not unlike totals.
+  - name: wip_age_days
+    description: >-
+      Calendar days from the work date to the dataset's daily snapshot for each
+      unissued billable time entry, including draft-allocated work. It is not invoice
+      age or time since draft preparation. Quote the snapshot and aggregation when
+      summarizing; value-weighted age and simple mean age answer different questions.
+    grain: firm, matter, currency, time entry, snapshot
+    unit: calendar days
+    expression: DATEDIFF(:as_of, work_date)
+    source_entities: [TimeEntry, Invoice, Matter]
+    aggregations:
+      minimum: MIN(wip_age_days)
+      maximum: MAX(wip_age_days)
+      simple_mean: AVG(wip_age_days)
+      value_weighted: SUM(value_cents * wip_age_days) / NULLIF(SUM(value_cents), 0)
+    sql: |
+      SELECT firm_id, matter_id, currency, time_entry_id, hours, value_cents,
+        DATEDIFF(:as_of, work_date) AS wip_age_days,
+        CASE WHEN DATEDIFF(:as_of, work_date) < 30 THEN '0_29'
+             WHEN DATEDIFF(:as_of, work_date) < 60 THEN '30_59'
+             WHEN DATEDIFF(:as_of, work_date) < 90 THEN '60_89'
+             WHEN DATEDIFF(:as_of, work_date) <= 120 THEN '90_120'
+             ELSE '121_plus' END AS age_bucket
+      FROM wip_entries
+    comparison_note: Compare the same unissued scope and report aging movement separately from changes in entry population.
+  - name: realization_rate
+    description: >-
+      Issued net time fees divided by standard time value for exactly the same invoice
+      issue-month cohort and currency. Exclude costs from both sides. Negotiated rates,
+      time-entry reductions and proforma concessions explain the gap. Later invoice
+      write-offs do not change issued net time and must not be blamed for a decline in
+      this measure; they explain lower recoverability instead.
+    grain: firm, practice group, invoice-issued month, currency
+    unit: ratio; display as percent
+    expression: SUM(net_time_cents) / NULLIF(SUM(standard_time_cents), 0)
+    source_entities: [Invoice, Matter, PracticeGroup, Adjustment]
+    sql: |
+      SELECT firm_id, practice_group_id, issued_month, currency,
+        SUM(CAST(net_time_cents AS DECIMAL(38,0))) AS billed_net_time_cents,
+        SUM(CAST(standard_time_cents AS DECIMAL(38,0))) AS standard_time_cents,
+        SUM(CAST(net_time_cents AS DECIMAL(38,0))) /
+          NULLIF(SUM(CAST(standard_time_cents AS DECIMAL(38,0))), 0) AS realization_rate,
+        SUM(CAST(standard_time_cents AS DECIMAL(38,0))) -
+          SUM(CAST(gross_time_cents AS DECIMAL(38,0))) AS negotiation_gap_cents
+      FROM cohort_invoices
+      GROUP BY firm_id, practice_group_id, issued_month, currency
+    comparison_note: >-
+      Matches expected.realization_cohort issued_prebill_realization at identical scope.
+      Compare last complete issued month with its predecessor; percentage-point change
+      is new ratio minus old ratio. Do not compare unmatched work-month denominators.
+  - name: collection_rate
+    description: >-
+      Cash applied through the daily snapshot to a selected invoice issue-month cohort,
+      divided by that cohort's original issued net bills, including costs. Match each
+      payment to its invoice and aggregate applications before joining the invoice
+      denominator. Do not deduct write-offs from billed value or restrict payments to
+      the issue month. Recent cohorts have had less time to collect.
+    grain: firm, practice group, invoice-issued month, currency
+    unit: ratio; display as percent
+    expression: SUM(matched_applied_cash_cents) / NULLIF(SUM(issued_net_cents), 0)
+    source_entities: [Payment, Invoice, Matter]
+    sql: |
+      SELECT i.firm_id, i.practice_group_id, i.issued_month, i.currency,
+        SUM(COALESCE(p.cash_cents, 0)) AS matched_applied_cash_cents,
+        SUM(CAST(i.net_cents AS DECIMAL(38,0))) AS issued_net_cents,
+        SUM(COALESCE(p.cash_cents, 0)) /
+          NULLIF(SUM(CAST(i.net_cents AS DECIMAL(38,0))), 0) AS collection_rate
+      FROM cohort_invoices i
+      LEFT JOIN (
+        SELECT firm_id, matter_id, invoice_id, currency,
+          SUM(CAST(amount_cents AS DECIMAL(38,0))) AS cash_cents
+        FROM s_payments GROUP BY firm_id, matter_id, invoice_id, currency
+      ) p ON p.firm_id = i.firm_id AND p.invoice_id = i.invoice_id
+        AND p.matter_id = i.matter_id AND p.currency = i.currency
+      GROUP BY i.firm_id, i.practice_group_id, i.issued_month, i.currency
+    comparison_note: Match issued cohorts and cash cutoff; explain unequal collection maturity rather than implying causation.
+  - name: days_sales_outstanding
+    description: >-
+      The user's named metric is the unweighted average calendar days from invoice
+      issue to each positive cash application in the selected issued-month cohort,
+      through the snapshot. Partial applications each count once. Unpaid invoices have
+      no observed cash delay, so exclude them from the mean and report the application
+      count; no applications means undefined, not zero. This is NOT standard sales DSO.
+    grain: firm, practice group, invoice-issued month, currency; underlying observation is a cash application
+    unit: calendar days per cash application
+    expression: AVG(DATEDIFF(paid_on, issued_on))
+    source_entities: [Invoice, Payment, Matter]
+    sql: |
+      SELECT i.firm_id, i.practice_group_id, i.issued_month, i.currency,
+        COUNT(p.payment_id) AS cash_application_count,
+        AVG(DATEDIFF(p.paid_on, i.issued_on)) AS days_sales_outstanding
+      FROM cohort_invoices i
+      LEFT JOIN s_payments p ON p.firm_id = i.firm_id AND p.invoice_id = i.invoice_id
+        AND p.matter_id = i.matter_id AND p.currency = i.currency
+        AND p.amount_cents > 0 AND p.paid_on >= i.issued_on
+      GROUP BY i.firm_id, i.practice_group_id, i.issued_month, i.currency
+    comparison_note: >-
+      The generator's dso_metrics and Solace 95-day golden use collectible AR divided
+      by net 90-day credit sales times 90. That separate sales DSO metric is not this
+      application-delay average. Solace has no applications, so this metric is NULL,
+      not 95. Never conflate cash-application delay with age of unpaid invoices.
+  - name: leakage
+    description: >-
+      Positive fee reductions recorded through the snapshot, split by exclusive
+      time_entry, proforma and invoice stages and by reason_code. Each adjustment
+      counts once. For realization comparisons, trace its stage-specific target to
+      the selected issued cohort and divide each stage/reason total by that whole
+      cohort's standard time value. Draft-only reductions remain in total leakage
+      but not issued-cohort rates. Invoice-stage rates describe recoverability loss.
+    grain: firm, matter, currency, stage, reason; comparison grain is practice, issued month, currency, stage, reason
+    unit: cents and ratio to matched standard time
+    expression: SUM(amount_cents) GROUP BY stage, reason_code
+    rate_expression: SUM(matched_stage_reason_amount_cents) / NULLIF(SUM(cohort_standard_time_cents), 0)
+    source_entities: [Adjustment, TimeEntry, Proforma, Invoice, Matter, PracticeGroup]
+    stage_mapping:
+      time_entry: adjustment.time_entry_id -> time_entries.invoice_id; pre-draft reduction
+      proforma: adjustment.proforma_id -> proformas.invoice_id; write-down at review
+      invoice: adjustment.invoice_id -> invoices.invoice_id; post-issue write-off
+    sql: |
+      SELECT firm_id, matter_id, currency, stage, reason_code,
+        SUM(CAST(amount_cents AS DECIMAL(38,0))) AS leakage_cents
+      FROM mapped_adjustments
+      GROUP BY firm_id, matter_id, currency, stage, reason_code
+    comparison_sql: |
+      SELECT x.firm_id, x.practice_group_id, x.issued_month, x.currency, x.stage, x.reason_code,
+        x.leakage_cents, d.standard_time_cents,
+        x.leakage_cents / NULLIF(d.standard_time_cents, 0) AS leakage_rate
+      FROM (
+        SELECT i.firm_id, i.practice_group_id, i.issued_month, i.currency, a.stage, a.reason_code,
+          SUM(CAST(a.amount_cents AS DECIMAL(38,0))) AS leakage_cents
+        FROM mapped_adjustments a
+        JOIN cohort_invoices i ON i.firm_id = a.firm_id AND i.invoice_id = a.cohort_invoice_id
+          AND i.matter_id = a.matter_id AND i.currency = a.currency
+        GROUP BY i.firm_id, i.practice_group_id, i.issued_month, i.currency, a.stage, a.reason_code
+      ) x
+      JOIN (
+        SELECT firm_id, practice_group_id, issued_month, currency,
+          SUM(CAST(standard_time_cents AS DECIMAL(38,0))) AS standard_time_cents
+        FROM cohort_invoices GROUP BY firm_id, practice_group_id, issued_month, currency
+      ) d ON d.firm_id = x.firm_id AND d.practice_group_id = x.practice_group_id
+        AND d.issued_month = x.issued_month AND d.currency = x.currency
+    comparison_note: >-
+      Cohort stage totals match expected.realization_cohort after aggregating reason
+      groups. Never add document discounts to their adjustment rows, nor divide only
+      by invoices that have that reason. An absent stage has zero leakage only when
+      the cohort exists; a missing cohort/zero denominator leaves its rate undefined.
+  - name: budget_variance
+    description: >-
+      Recorded negotiated time fees and hours from quarter start through the snapshot
+      minus the full-quarter approved plan for the same matter, phase and currency.
+      Exclude costs and do not subtract billing reductions. Report fees and hours
+      separately, including their plan-based variance ratios; positive means over
+      budget. Zero budgets leave ratios undefined rather than implying zero variance.
+    grain: firm, matter, quarter, phase, currency; one unique budget row
+    unit: fee cents, hours, and ratios to their respective budgets
+    expression: actual_fee_cents - fee_budget_cents; actual_hours - hours_budget
+    source_entities: [Budget, TimeEntry, Matter]
+    sql: |
+      SELECT b.firm_id, b.matter_id, b.currency, b.budget_id, b.phase,
+        b.period_start, b.period_end_exclusive, b.fee_budget_cents, b.hours_budget,
+        COALESCE(a.actual_fees_cents, 0) AS actual_fees_cents,
+        COALESCE(a.actual_hours, 0) AS actual_hours,
+        COALESCE(a.actual_fees_cents, 0) - b.fee_budget_cents AS fee_variance_cents,
+        COALESCE(a.actual_hours, 0) - b.hours_budget AS hours_variance,
+        (COALESCE(a.actual_fees_cents, 0) - b.fee_budget_cents) /
+          NULLIF(b.fee_budget_cents, 0) AS fee_variance_ratio,
+        (COALESCE(a.actual_hours, 0) - b.hours_budget) /
+          NULLIF(b.hours_budget, 0) AS hours_variance_ratio
+      FROM s_budgets b
+      LEFT JOIN (
+        SELECT firm_id, matter_id, currency, phase,
+          SUM(CAST(value_cents AS DECIMAL(38,0))) AS actual_fees_cents,
+          SUM(hours) AS actual_hours
+        FROM s_time_entries
+        WHERE work_date >= CAST(date_trunc('quarter', :as_of) AS DATE) AND work_date <= :as_of
+        GROUP BY firm_id, matter_id, currency, phase
+      ) a ON a.firm_id = b.firm_id AND a.matter_id = b.matter_id
+        AND a.currency = b.currency AND a.phase = b.phase
+      WHERE b.period_start = CAST(date_trunc('quarter', :as_of) AS DATE)
+        AND b.period_end_exclusive = add_months(CAST(date_trunc('quarter', :as_of) AS DATE), 3)
+    comparison_note: >-
+      Matches expected.quarter_variances for its responsible-partner scope when phases
+      partition the same actuals and budget. The original golden is whole-matter; do
+      not duplicate that full plan across phases. Compare like quarters and disclose
+      quarter-to-snapshot actuals versus a full-quarter plan rather than a forecast.

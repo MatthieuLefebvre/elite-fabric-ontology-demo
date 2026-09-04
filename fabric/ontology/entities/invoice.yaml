@@ -1,0 +1,30 @@
+name: Invoice
+table: invoices
+key: invoice_id
+display_name: invoice_number
+description: >-
+  An issued bill, with gross after time-entry review, proforma discount and immutable
+  issued net. net_time_cents excludes costs and is the realization numerator.
+  Later invoice write-offs reduce collectible receivables, not issued net or its
+  historical realization. Issue month, not work month, defines billed cohorts.
+properties:
+  invoice_id: {column: invoice_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  invoice_number: {column: invoice_number, source_column: invoice_id, type: string}
+  date: {column: date, source_column: issued_on, type: date}
+  gross_cents: {column: gross_cents, type: long}
+  gross: {column: gross, type: 'decimal(18,2)', expression: 'CAST(gross_cents AS DECIMAL(20,0)) / 100'}
+  discount_cents: {column: discount_cents, type: long}
+  discount: {column: discount, type: 'decimal(18,2)', expression: 'CAST(discount_cents AS DECIMAL(20,0)) / 100'}
+  net_cents: {column: net_cents, type: long}
+  net: {column: net, type: 'decimal(18,2)', expression: 'CAST(net_cents AS DECIMAL(20,0)) / 100'}
+  currency: {column: currency, type: string}
+  due_date: {column: due_date, source_column: due_on, type: date}
+  ebilling_status: {column: ebilling_status, type: string}
+  matter_id: {column: matter_id, type: string}
+  proforma_id: {column: proforma_id, type: string}
+  status: {column: status, type: string}
+  standard_time_cents: {column: standard_time_cents, type: long}
+  gross_time_cents: {column: gross_time_cents, type: long}
+  net_time_cents: {column: net_time_cents, type: long}
+  disbursement_cents: {column: disbursement_cents, type: long}

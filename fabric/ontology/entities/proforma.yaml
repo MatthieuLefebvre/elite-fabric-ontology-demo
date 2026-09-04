@@ -1,0 +1,22 @@
+name: Proforma
+table: proformas
+key: proforma_id
+display_name: proforma_number
+description: >-
+  A draft bill gathering work and costs for review. Draft value is net of pre-draft
+  time reductions and proforma concessions, including costs. Conversion creates an
+  invoice; never add the converted draft and its invoice as two bills. Period is the
+  preparation calendar month in this synthetic source, not a guessed service period.
+properties:
+  proforma_id: {column: proforma_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  proforma_number: {column: proforma_number, source_column: proforma_id, type: string}
+  period: {column: period, type: string, expression: "date_format(prepared_on, 'yyyy-MM')"}
+  draft_value_cents: {column: draft_value_cents, source_column: net_cents, type: long}
+  draft_value: {column: draft_value, type: 'decimal(18,2)', expression: 'CAST(net_cents AS DECIMAL(20,0)) / 100'}
+  reviewer_id: {column: reviewer_id, type: string}
+  status: {column: status, type: string}
+  matter_id: {column: matter_id, type: string}
+  invoice_id: {column: invoice_id, type: string}
+  currency: {column: currency, type: string}
+  prepared_on: {column: prepared_on, type: date}

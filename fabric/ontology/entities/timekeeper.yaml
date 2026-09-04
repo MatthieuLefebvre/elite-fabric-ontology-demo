@@ -1,0 +1,19 @@
+name: Timekeeper
+table: timekeepers
+key: timekeeper_id
+display_name: name
+description: >-
+  A fee earner or staff member recording work. Standard rate is the unnegotiated fee
+  benchmark in standard_rate_currency; the matter's negotiated rate is separate.
+  Being a partner or recording work never implies permission to view a matter.
+properties:
+  timekeeper_id: {column: timekeeper_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  name: {column: name, source_column: full_name, type: string}
+  grade: {column: grade, type: string}
+  standard_rate_cents: {column: standard_rate_cents, type: long}
+  standard_rate: {column: standard_rate, type: 'decimal(18,2)', expression: 'CAST(standard_rate_cents AS DECIMAL(20,0)) / 100'}
+  standard_rate_currency: {column: standard_rate_currency, type: string}
+  office: {column: office, type: string}
+  department: {column: department, type: string}
+  practice_group_id: {column: practice_group_id, type: string}

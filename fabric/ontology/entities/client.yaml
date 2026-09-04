@@ -1,0 +1,16 @@
+name: Client
+table: clients
+key: client_id
+display_name: name
+description: >-
+  The organization instructing the firm. Its relationship partner owns the overall
+  client relationship, not necessarily responsibility, billing or origination on a
+  particular matter. Client-wide totals must include only matters the caller can see.
+properties:
+  client_id: {column: client_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  client_number: {column: client_number, source_column: client_id, type: string}
+  name: {column: name, source_column: client_name, type: string}
+  industry: {column: industry, type: string}
+  relationship_partner_id: {column: relationship_partner_id, type: string}
+  credit_status: {column: credit_status, type: string}

@@ -1,0 +1,251 @@
+relationships:
+  - name: ClientServedThroughMatter
+    label: A client is served through one or more matters.
+    cardinality: one-to-many
+    source: Client
+    target: Matter
+    table: matters
+    source_column: client_id
+    target_column: matter_id
+  - name: MatterWorkedByPracticeGroup
+    label: A matter is worked by a practice group.
+    cardinality: many-to-one
+    source: Matter
+    target: PracticeGroup
+    table: matters
+    source_column: matter_id
+    target_column: practice_group_id
+  - name: MatterResponsiblePartner
+    label: A matter has a responsible partner who owns delivery of the engagement.
+    cardinality: many-to-one
+    source: Matter
+    target: Timekeeper
+    table: matters
+    source_column: matter_id
+    target_column: responsible_partner_id
+  - name: MatterBillingPartner
+    label: A matter has a billing partner who owns billing decisions.
+    cardinality: many-to-one
+    source: Matter
+    target: Timekeeper
+    table: matters
+    source_column: matter_id
+    target_column: billing_partner_id
+  - name: MatterOriginatingPartner
+    label: A matter has an originating partner credited with bringing in the engagement.
+    cardinality: many-to-one
+    source: Matter
+    target: Timekeeper
+    table: matters
+    source_column: matter_id
+    target_column: originating_partner_id
+  - name: MatterBillsFromLegalEntity
+    label: A matter bills from a legal entity in that entity's currency.
+    cardinality: many-to-one
+    source: Matter
+    target: LegalEntity
+    table: matters
+    source_column: matter_id
+    target_column: legal_entity_id
+  - name: MatterPhaseOfParent
+    label: A sub-matter is a phase of a parent matter, but bills and access remain separate.
+    cardinality: many-to-zero-or-one
+    source: Matter
+    target: Matter
+    table: matters
+    source_column: matter_id
+    target_column: parent_matter_id
+    filter: parent_matter_id IS NOT NULL
+  - name: TimeEntryAgainstMatter
+    label: Work was recorded against a matter on a date.
+    cardinality: many-to-one
+    source: TimeEntry
+    target: Matter
+    table: time_entries
+    source_column: time_entry_id
+    target_column: matter_id
+  - name: TimeEntryRecordedByTimekeeper
+    label: Work was recorded by a timekeeper on a date.
+    cardinality: many-to-one
+    source: TimeEntry
+    target: Timekeeper
+    table: time_entries
+    source_column: time_entry_id
+    target_column: timekeeper_id
+  - name: DisbursementChargedToMatter
+    label: A recoverable or nonrecoverable cost is recorded against a matter.
+    cardinality: many-to-one
+    source: Disbursement
+    target: Matter
+    table: disbursements
+    source_column: disbursement_id
+    target_column: matter_id
+  - name: TimeEntryGatheredIntoProforma
+    label: Unbilled work is gathered into a draft bill for review.
+    cardinality: many-to-zero-or-one
+    source: TimeEntry
+    target: Proforma
+    table: time_entries
+    source_column: time_entry_id
+    target_column: proforma_id
+    filter: proforma_id IS NOT NULL
+  - name: DisbursementGatheredIntoProforma
+    label: Unbilled costs are gathered into a draft bill for review.
+    cardinality: many-to-zero-or-one
+    source: Disbursement
+    target: Proforma
+    table: disbursements
+    source_column: disbursement_id
+    target_column: proforma_id
+    filter: proforma_id IS NOT NULL
+  - name: ProformaIssuedAsInvoice
+    label: A reviewed proforma is issued as an invoice.
+    cardinality: one-to-zero-or-one
+    source: Proforma
+    target: Invoice
+    table: proformas
+    source_column: proforma_id
+    target_column: invoice_id
+    filter: invoice_id IS NOT NULL
+  - name: ProformaForMatter
+    label: A draft bill gathers work for one matter.
+    cardinality: many-to-one
+    source: Proforma
+    target: Matter
+    table: proformas
+    source_column: proforma_id
+    target_column: matter_id
+  - name: InvoiceBillsMatter
+    label: An issued invoice bills one matter without absorbing its sub-matters.
+    cardinality: many-to-one
+    source: Invoice
+    target: Matter
+    table: invoices
+    source_column: invoice_id
+    target_column: matter_id
+  - name: InvoiceSettledByPayment
+    label: An invoice is settled by one or more cash applications, in full or in part.
+    cardinality: one-to-many
+    source: Invoice
+    target: Payment
+    table: payments
+    source_column: invoice_id
+    target_column: payment_id
+  - name: AdjustmentReducesTimeEntry
+    label: Value was reduced at time-entry review before a draft bill was prepared.
+    cardinality: many-to-zero-or-one
+    source: Adjustment
+    target: TimeEntry
+    table: adjustments
+    source_column: adjustment_id
+    target_column: time_entry_id
+    filter: stage = 'time_entry' AND time_entry_id IS NOT NULL AND proforma_id IS NULL AND invoice_id IS NULL
+  - name: AdjustmentReducesProforma
+    label: Value was written down at proforma review before invoice issue.
+    cardinality: many-to-zero-or-one
+    source: Adjustment
+    target: Proforma
+    table: adjustments
+    source_column: adjustment_id
+    target_column: proforma_id
+    filter: stage = 'proforma' AND proforma_id IS NOT NULL AND time_entry_id IS NULL AND invoice_id IS NULL
+  - name: AdjustmentReducesInvoice
+    label: Value was written off after invoice issue, reducing recoverability rather than issued realization.
+    cardinality: many-to-zero-or-one
+    source: Adjustment
+    target: Invoice
+    table: adjustments
+    source_column: adjustment_id
+    target_column: invoice_id
+    filter: stage = 'invoice' AND invoice_id IS NOT NULL AND time_entry_id IS NULL AND proforma_id IS NULL
+  - name: MatterMeasuredAgainstBudget
+    label: A matter is measured against a budget for a quarter and phase.
+    cardinality: one-to-many
+    source: Matter
+    target: Budget
+    table: budgets
+    source_column: matter_id
+    target_column: budget_id
+  - name: ClientImposesBillingGuideline
+    label: A client imposes outside-counsel rules for an effective period and currency.
+    cardinality: one-to-many
+    source: Client
+    target: BillingGuideline
+    table: billing_guidelines
+    source_column: client_id
+    target_column: billing_guideline_id
+  - name: InvoiceSubjectToBillingGuideline
+    label: An invoice is subject to a client rule; recorded compliance states whether it satisfies that rule.
+    cardinality: many-to-many
+    source: Invoice
+    target: BillingGuideline
+    table: invoice_guidelines
+    source_column: invoice_id
+    target_column: billing_guideline_id
+    attributes:
+      compliant: {column: compliant, type: boolean}
+    description: >-
+      Compliance is portable bridge data, not a public relationship property. Query
+      invoice_guidelines.compliant through an authorized invoice; edge existence is not success.
+  - name: TimekeeperMatterAccess
+    label: A timekeeper may or may not see a matter; inspect its granted or screened access decision.
+    cardinality: many-to-many
+    source: Timekeeper
+    target: Matter
+    table: matter_access
+    source_column: timekeeper_id
+    target_column: matter_id
+    attributes:
+      access_type: {column: access_type, type: string, values: [granted, screened]}
+    description: >-
+      Informational adjacency only, not authorization or an effective-grants view.
+      Both decisions can coexist. Public relationship JSON has no attribute payload;
+      MatterAccess reifies each decision and carries access_type without loss.
+  - name: MatterAccessForTimekeeper
+    label: An access decision identifies the timekeeper whose access is granted or screened.
+    cardinality: many-to-one
+    source: MatterAccess
+    target: Timekeeper
+    table: matter_access
+    source_column: matter_access_id
+    target_column: timekeeper_id
+  - name: MatterAccessForMatter
+    label: An access decision identifies the matter governed by that decision.
+    cardinality: many-to-one
+    source: MatterAccess
+    target: Matter
+    table: matter_access
+    source_column: matter_access_id
+    target_column: matter_id
+  - name: ClientRelationshipPartner
+    label: A client has a relationship partner responsible for the overall client relationship.
+    cardinality: many-to-one
+    source: Client
+    target: Timekeeper
+    table: clients
+    source_column: client_id
+    target_column: relationship_partner_id
+  - name: PracticeGroupLedByTimekeeper
+    label: A practice group is led by its group head.
+    cardinality: many-to-one
+    source: PracticeGroup
+    target: Timekeeper
+    table: practice_groups
+    source_column: practice_group_id
+    target_column: group_head_id
+  - name: ProformaReviewedByTimekeeper
+    label: A draft bill is assigned to a reviewer before issue.
+    cardinality: many-to-one
+    source: Proforma
+    target: Timekeeper
+    table: proformas
+    source_column: proforma_id
+    target_column: reviewer_id
+  - name: AdjustmentApprovedByTimekeeper
+    label: A value reduction records the timekeeper who approved it.
+    cardinality: many-to-one
+    source: Adjustment
+    target: Timekeeper
+    table: adjustments
+    source_column: adjustment_id
+    target_column: approver_id

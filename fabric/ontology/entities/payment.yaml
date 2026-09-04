@@ -1,0 +1,19 @@
+name: Payment
+table: payments
+key: payment_id
+display_name: payment_id
+description: >-
+  One cash application to one invoice, including partial settlement. paid_on is the
+  application date in this generator. Several applications must not duplicate the
+  invoice denominator. A receipt split across invoices needs one uniquely keyed row
+  per application; unapplied cash does not belong to an issued-invoice cohort.
+properties:
+  payment_id: {column: payment_id, type: string}
+  firm_id: {column: firm_id, type: string}
+  date: {column: date, source_column: paid_on, type: date}
+  amount_cents: {column: amount_cents, type: long}
+  amount: {column: amount, type: 'decimal(18,2)', expression: 'CAST(amount_cents AS DECIMAL(20,0)) / 100'}
+  method: {column: method, source_column: payment_method, type: string}
+  invoice_id: {column: invoice_id, type: string}
+  matter_id: {column: matter_id, type: string}
+  currency: {column: currency, type: string}

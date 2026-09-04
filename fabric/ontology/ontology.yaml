@@ -1,0 +1,60 @@
+version: 1
+name: EliteLegalFinancialOntology
+description: >-
+  A firm's legal financial lifecycle, from client engagement and recorded work through
+  draft review, issued bills, cash application and stage-specific value reductions.
+  Matter is the business and authorization anchor; three partner roles remain distinct.
+entities:
+  - entities/client.yaml
+  - entities/matter.yaml
+  - entities/timekeeper.yaml
+  - entities/practice_group.yaml
+  - entities/legal_entity.yaml
+  - entities/time_entry.yaml
+  - entities/disbursement.yaml
+  - entities/proforma.yaml
+  - entities/invoice.yaml
+  - entities/payment.yaml
+  - entities/adjustment.yaml
+  - entities/budget.yaml
+  - entities/billing_guideline.yaml
+  - entities/matter_access.yaml
+relationships: relationships.yaml
+measures: measures.yaml
+security: security.yaml
+gold:
+  table_naming: original SPECS table names in a non-schema-enabled Gold lakehouse
+  retain_source_columns: true
+  passthrough_tables: [invoice_guidelines]
+  expression_dialect: SparkSQL
+  projection_rule: >-
+    Evaluate every property expression against the ORIGINAL source row, then alias to
+    column. Otherwise alias source_column (default column) to column. Retain all original
+    SPECS columns; replace aliases with the same name, never create duplicate columns.
+    Cast to the declared Spark type. Expressions never depend on another new alias.
+  snapshot: >-
+    One daily snapshot; use manifest.as_of as :as_of, never current_date(). Status is
+    snapshot state, not an event ledger. Earlier dates require an earlier complete snapshot.
+  currency: >-
+    All financial groupings include firm_id and currency; no implicit FX. Sum integer
+    cents (or decimal(38,0) casts to avoid overflow), then divide by 100 for display.
+  new_source_fields:
+    clients: [industry, relationship_partner_id, credit_status]
+    practice_groups: [group_head_id]
+    legal_entities: [jurisdiction]
+    timekeepers: [grade, office, department]
+    time_entries: [rate_cents, billable_flag, phase]
+    disbursements: [type, vendor, recoverable_flag]
+    proformas: [reviewer_id]
+    invoices: [ebilling_status]
+    adjustments: [reason_code, approver_id]
+    budgets: [phase]
+    billing_guidelines: [rule_type, threshold, effective_from, effective_to]
+  source_field_notes: >-
+    These are generator extension requirements, not fabricated defaults. rate_cents is
+    the exact negotiated rates.hourly_rate_cents selected by time_entries.rate_id.
+    threshold is decimal(18,2), with units specified by rule_type (days for payment terms,
+    major currency units for fee caps). phase must use the same vocabulary on time_entries
+    and budgets; 'all' is a real whole-matter phase, not a wildcard to duplicate actuals.
+    Business numbers/code alias the existing stable synthetic IDs; replace those mappings
+    with real business numbers when integrating a production source.
