@@ -15,6 +15,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Synthetic data generation failed.' }
     & $python -m pytest
     if ($LASTEXITCODE -ne 0) { throw 'Tests failed; deployment planning stopped.' }
+    & $python -m ruff check .
+    if ($LASTEXITCODE -ne 0) { throw 'Lint failed.' }
+    & $python agent/evaluate.py --offline-self-test --repetitions 3
+    if ($LASTEXITCODE -ne 0) { throw 'Offline evaluator self-test failed (not a live rehearsal).' }
     # This convenience wrapper is ALWAYS cloud-offline, even without -DryRun.
     $deployArgs = @('fabric/deploy.py', '--dry-run')
     if ($Config) { $deployArgs += @('--config', $Config) }

@@ -332,6 +332,7 @@ def _guid(value: str, label: str) -> str:
         raise ValueError(f"{label} must be a non-nil resource GUID") from exc
 
 
+# VERIFY: ONTOLOGY_V1 — confirm preview property/binding types and graph refresh in target tenant.
 def build_ontology_definition(
     contract: Contract, workspace_id: str, lakehouse_id: str, display_name: str,
 ) -> dict:
@@ -482,6 +483,7 @@ def build_agent_draft_definition(contract: Contract, instructions: str = "") -> 
     ]}
 
 
+# VERIFY: AGENT_ONTOLOGY — require a documented ontology datasource contract; never guess its enum.
 def build_agent_definition(
     contract: Contract, workspace_id: str, ontology_id: str, instructions: str,
 ) -> dict:

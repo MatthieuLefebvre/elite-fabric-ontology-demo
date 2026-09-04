@@ -249,6 +249,7 @@ class FabricClient:
             on_response(response)
         return self.poll(response)
 
+    # VERIFY: NOTEBOOK_JOB_V1 — validate RunNotebook on the target capacity and Spark runtime.
     def run_notebook(self, workspace_id: str, notebook_id: str, *,
                      on_response: Callable[[httpx.Response], None] | None = None) -> dict:
         # CONFIG_JSON is already injected into the public definition. No undocumented

@@ -1,0 +1,18 @@
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Arial, sans-serif", "primaryColor": "#e8f2ff", "primaryTextColor": "#142d4e", "lineColor": "#446581"}, "flowchart": {"htmlLabels": false, "curve": "linear"}}}%%
+flowchart TB
+    accTitle: Issued realization is not post-invoice recoverability
+    accDescr: Standard time less negotiation gap, time-entry reductions, and proforma write-downs yields issued net time fees. Invoice write-offs reduce recoverability, not issued realization. Cash reduces receivables. Every adjustment is attributed once to the same issued-month cohort and currency through Invoice, Matter, and PracticeGroup.
+    ST["Standard time: hours x standard rate"] -->|"Less negotiation gap"| NT["Negotiated time value"]
+    NT -->|"Less time-entry reductions"| PF["Reviewed proforma time"]
+    PF -->|"Less proforma write-downs"| I["Issued net time fees"]
+    I --> R["Issued realization = issued net time / matched standard time"]
+    I -->|"Less invoice write-offs / bad debt"| REC["Recoverable time before cash"]
+    REC --> RR["Recoverable-time ratio / matched standard time"]
+    I -->|"Add billed costs; exclude from fee ratios"| TOTAL["Original issued total"]
+    TOTAL --> AR["Outstanding = issued total - invoice write-offs - cash"]
+    A["Adjustment: one stage, one target, counted once"] -. "Follow target to issued invoice" .-> I
+    I -. "Business attribution" .-> M["Matter"]
+    M -.-> PG["PracticeGroup / issue month / currency"]
+    NOTE["Invoice write-offs do NOT change already-issued realization"] -.-> R
+    classDef warning fill:#fff0e6,stroke:#ba4a00,color:#7c3200,stroke-width:2px;
+    class NOTE,REC,AR warning;

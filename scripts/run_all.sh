@@ -16,4 +16,6 @@ done
 [[ -x .venv/bin/python ]] || { printf '%s\n' 'Run bash scripts/setup.sh first.' >&2; exit 2; }
 .venv/bin/python data-generator/generate.py --output data
 .venv/bin/python -m pytest
+.venv/bin/python -m ruff check .
+.venv/bin/python agent/evaluate.py --offline-self-test --repetitions 3
 .venv/bin/python fabric/deploy.py "${args[@]}"

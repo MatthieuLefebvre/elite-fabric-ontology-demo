@@ -30,23 +30,51 @@ Exact reproducible values are calculated from generated data, not hard-coded int
 agent answers. The fixed default snapshot is **2026-09-04**; “last month” is August
 2026 and “this quarter” starts July 1. Moving the snapshot requires explicit regeneration.
 
+### Numeric demo card — generated snapshot, not an agent transcript
+
+The current [expected-answer fixture](data/expected_answers.json) gives these Harbor
+values for Alexandra Reyes's authorized scope. Money is stored as integer cents;
+percentages use the fixture's six-place ratios. USD is not combined with GBP.
+
+| Case | Exact default result |
+|---|---|
+| Meridian — Acquisition of Calder Systems | **USD 432,000.00** negotiated unbilled time; **200 entries / 800.00 hours**, aged **60–120 days**. Standard time value is USD 480,000.00; costs are separate. |
+| Castellan — Employment tribunal series | **USD 54,000.00** against USD 40,000.00: **USD 14,000.00 / 35%** over; **135.00 hours** against 100.00. |
+| Castellan — Lease renegotiations | **USD 43,200.00** against USD 40,000.00: **USD 3,200.00 / 8%** over; **108.00 hours** against 100.00. |
+| Authorized litigation, July → August | Issued realization **87.3180% → 62.9985%**, down **24.3195 percentage points**. August issued net time USD 329,040.95 / standard time USD 522,300.00. |
+| August stage attribution | Vantage — Contract dispute: **USD 134,719.20** proforma reductions. Redgrave — Product liability defence: **USD 12,573.79** invoice write-offs; these affect recoverability, not already-issued realization. |
+| Meridian billing position | Issued net **USD 218,329.05**, collected **USD 216,167.92**, invoice write-offs **USD 2,161.13**, outstanding **USD 0.00**, draft net **USD 0.00**; unbilled costs **USD 3,238.00** in addition to the time above. |
+| Ashworth follow-up | **Denied**; no financial figures, narrative, or inferred attributes may be returned. |
+
+Q1 and the billing card exclude Meridian's child matters and unconverted drafts
+from the unbilled-time subtotal. Quarter actuals run July 1 through September 4
+inclusive against the **full-quarter** budget, not a prorated plan. Zero issued
+receivables can coexist with substantial unbilled work. Meridian's fixed-fee-capped
+arrangement means recorded time value is not guaranteed collectible future revenue.
+
 ## Architecture and truth boundaries
 
 ```mermaid
 flowchart LR
-  subgraph P[Provider tenant — synthetic source only]
-    B[Bronze] --> S[Silver] --> G[Firm-isolated Gold]
-  end
-  G --> X[External data share — live read]
-  subgraph A[Customer tenant A — Harbor and Vance]
-    X --> H[OneLake shortcut] --> O[Bound ontology] --> D[Data agent]
-    D --> W[M365 Copilot in Word]
-  end
-  G --> Y[Separate external share]
-  subgraph K[Customer tenant B — Kestrel]
-    Y --> L[OneLake shortcut] --> Q[Same ontology definition] --> R[Own agent]
-  end
+	subgraph Provider[Provider tenant — synthetic source]
+		Bronze --> Silver --> Gold[Firm-isolated Gold]
+	end
+	Gold --> Share[External share — manual acceptance]
+	subgraph Customer[Consumer tenant — one instance per firm]
+		Share --> Shortcut[OneLake shortcut]
+		Shortcut --> Gate[Verified data-plane security gate]
+		Gate --> Ontology[Consumer-bound ontology]
+		Ontology --> Agent[Fabric data agent]
+		Agent --> Word[M365 Copilot in Word — separate validation]
+	end
 ```
+
+![Three-tenant architecture with manual sharing, a hard security gate before ontology binding, and separate agent and Word verification.](docs/img/architecture.svg)
+
+The [architecture guide](docs/01-architecture.md) and
+[Mermaid source](docs/img/architecture.mmd) distinguish implemented core operations
+from manual or blocked stages. The portable ontology contains **13 business entities
+plus MatterAccess and 7 SQL measures**, not native deployed Fabric measures.
 
 There is an important distinction between the business aspiration and this topology:
 external sharing reads provider-hosted data across a tenant boundary. It does **not**
@@ -59,14 +87,18 @@ Microsoft's AI processing region settings also require a separate residency revi
 Full isolation for two independent customer tenants requires **three tenants** (provider
 plus two consumers). Two tenants support the provider and one external customer, or
 two customer workspaces sharing a consumer tenant; the latter proves workspace, not
-cross-customer tenant isolation. Single-tenant simulation is always explicitly labeled.
+cross-customer tenant isolation. `--allow-shared-consumer-tenant` means **2 tenants /
+3 workspaces**. `--single-tenant-simulation` means **1 tenant / 2 workspaces**, with
+**2 separate firm lakehouses in the shared consumer workspace**. Both are weaker
+than independent consumer tenants; neither proves partner-level authorization.
 
 ## Prerequisites and status
 
-Python 3.11 or newer and Git are sufficient for local generation and tests. Live use
-requires paid Fabric capacity that supports the selected previews, capacity assignment
+The setup wrappers require **Python 3.11 or newer** and Git.
+Live use requires paid **F2 or higher** Fabric capacity in a supported region, capacity assignment
 rights, tenant-approved service principals, separate customer identities, and appropriate
-Fabric and Microsoft 365 Copilot entitlements. See [the deployment guide](docs/03-deployment-guide.md)
+Fabric and Microsoft 365 entitlements for the chosen experience. F2 eligibility does
+not certify ontology/Graph availability. See [the deployment guide](docs/03-deployment-guide.md)
 for the permission matrix, tenant settings, preview contracts, and blocking checks.
 
 The target APIs are verified against public Microsoft documentation dated **2026-09-04**.
@@ -92,7 +124,8 @@ bash scripts/run_all.sh --dry-run
 ```
 
 The setup scripts create a local virtual environment and install pinned dependencies.
-The run scripts generate data, run tests, and plan the deployment. For live execution,
+The run scripts generate data, run tests, and plan the deployment; they **always use
+deployment dry-run**, even without the convenience flag. For live execution,
 copy `.env.example` to `.env`, configure tenant-owned credentials privately, and run:
 
 ```powershell
@@ -102,6 +135,27 @@ copy `.env.example` to `.env`, configure tenant-owned credentials privately, and
 
 Use `--single-tenant-simulation` only for a clearly labeled workshop simulation. A
 preflight that reports UNKNOWN or FAIL is not permission to claim a working live demo.
+Full live mode intentionally blocks before resource creation. Explicitly selecting
+`--through-step 4` requests supported core preparation only, after local validation
+and administrator review; it does not bypass the later sharing and security gates.
+
+## Evaluation: a passing fixture is not a live rehearsal
+
+The harness covers **all 5 canonical questions plus 15 variants per sweep**, using
+delegated Harbor identity for live MCP calls. Authorized answers must be JSON text
+with a business paragraph, structured secure metrics, and citations. A hidden local
+fixture supplies comparison values, not live prompt answers. The strict paragraph
+grammar is narrower than a general natural-language judge.
+
+`--dry-run` validates inputs without authentication, network calls, or report writes.
+`--offline-self-test` constructs answers from the fixture and labels them
+**OFFLINE_NOT_AGENT**; `--responses-jsonl` labels recordings **RECORDED_NOT_LIVE**.
+Neither is independent agent evidence. Reports can have `all_passed=true` offline,
+but `live_readiness=false` remains mandatory, even after three successful delegated
+live sweeps, because raw-graph authorization and portal/Word proof are not certified.
+The local validation suite has **296 passing tests** on Python 3.12.10, and Ruff is clean. Both notebooks
+pass format and syntax checks; they have not been executed on Fabric Spark. No live
+tenant, deployed-agent, or Word result is claimed.
 
 ## Repository tour
 
@@ -116,10 +170,11 @@ consistent across Windows and Unix.
 
 ## Reuse beyond this workshop
 
-The legal content is intentionally separated from deployment mechanics. Replace entity
-definitions, relationship labels, measures, security policy, and generator configuration
-when changing domains; keep credentials, REST retries, operation polling, ownership
-tracking, and teardown. Do not just rename Matter to Order: reconsider each measure's
+The legal content is separated from reusable deployment mechanics. Names, rates, and
+legal scenarios are configurable; a different domain also requires replacing or
+extending source schemas, generators, invariants, measures, security, and evaluation.
+Keep tenant-aware credentials, REST retries, operation polling, ownership tracking,
+and teardown principles. Do not just rename Matter to Order: reconsider each measure's
 grain, units, and authorization traversal.
 
 For a field-service example, Client becomes Customer, Matter becomes ServiceContract,
@@ -132,9 +187,18 @@ in [the reuse guide](docs/05-reuse-for-your-own-domain.md) shows those seams.
 
 External data sharing requires recipient acceptance; a same-tenant shortcut is not a
 cross-tenant test. Fabric IQ and data agents are preview surfaces. An access relationship
-describes policy but does not install row-level security. M365 publishing is separate
-from publishing a Fabric agent. The deployment guide names each blocker and every
-`# VERIFY:` contract check. A successful local evaluator is never called a live rehearsal.
+describes policy but does not install row-level security: the deployment has a hard
+block **before live raw-Gold binding**. The ontology adapter is implemented, but the
+public DataAgent definition lacks an ontology datasource discriminator; a Graph ID
+cannot be replaced with an Ontology ID.
+
+Publishing a Fabric agent, publishing it to M365, and demonstrating it in Word are
+three different milestones. Microsoft documents M365 publication from **within Fabric**
+(portal or SDK in a Fabric notebook), not via a public API outside Fabric; see the
+[SDK publication note](https://learn.microsoft.com/en-us/fabric/data-science/fabric-data-agent-sdk#publish-the-data-agent).
+An Agent Store listing is not full Word integration evidence. The deployment guide
+names each blocker and the full [VERIFY checklist](docs/03-deployment-guide.md#verify-before-running).
+A successful local evaluator is never called a live rehearsal.
 
 ## Teardown and cost
 

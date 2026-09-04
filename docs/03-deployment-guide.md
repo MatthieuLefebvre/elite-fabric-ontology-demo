@@ -3,8 +3,8 @@
 Public contracts were checked on **2026-09-04**. This implementation has not been
 live-certified. Actual notebook templates, a portable ontology adapter, and offline
 tests are included; local success does not prove service acceptance, delegated
-authorization, or Word integration. The repository-wide suite is under refinement;
-this guide makes no final test-count claim.
+authorization, or Word integration. The local suite and lint pass on Python 3.12.10;
+no live tenant credentials were supplied and neither notebook ran on Fabric Spark.
 
 ## Capability matrix
 
@@ -26,7 +26,7 @@ that a symbolic plan was produced, not any cloud capability or authorization cla
 
 ## Local setup and safe entry points
 
-Use Python **3.11**. [scripts/setup.ps1](../scripts/setup.ps1) (Windows) and
+Use Python **3.11 or newer**. [scripts/setup.ps1](../scripts/setup.ps1) (Windows) and
 [scripts/setup.sh](../scripts/setup.sh) (Unix) create a local virtual environment and install the
 existing pinned direct dependencies from [requirements.txt](../requirements.txt).
 They check dependency consistency. Transitive dependencies are not a complete
@@ -528,12 +528,14 @@ M365's orchestrator can rephrase responses even when instructed not to.
 
 ## Verify before running
 
-A source scan on 2026-09-04 found **no literal `# VERIFY:` comments** in the current
-Python, notebook, YAML, PowerShell, or shell implementation under `fabric`, `agent`,
-`scripts`, and `data-generator`. That does **not** mean no gaps remain: the code uses
-explicit blockers and validation failures instead. This is the complete known review
-register for the implemented path; rerun the marker scan after changes and add any
-new entries here. Preview product support is not proof of a specific REST payload.
+Three source-level `# VERIFY:` markers identify tenant-dependent contracts:
+**NOTEBOOK_JOB_V1** in [fabric_client.py](../fabric/fabric_client.py), and
+**ONTOLOGY_V1** and **AGENT_ONTOLOGY** in
+[ontology_adapter.py](../fabric/ontology_adapter.py). They cover Spark execution,
+preview property/binding types and refresh, and the missing documented agent source
+discriminator. The additional hard blockers and validation obligations are listed
+below. Rerun the marker scan after adapter changes; preview product support is not
+proof of a specific REST payload.
 
 | Check | Implementation / required evidence |
 |---|---|

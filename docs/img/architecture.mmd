@@ -1,0 +1,26 @@
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Segoe UI, Arial, sans-serif", "primaryColor": "#e8f2ff", "primaryTextColor": "#142d4e", "lineColor": "#446581", "clusterBkg": "#f5f8fc", "clusterBorder": "#8297ae"}, "flowchart": {"htmlLabels": false, "curve": "linear"}}}%%
+flowchart TB
+    accTitle: Three-tenant legal-finance architecture and live gates
+    accDescr: Provider synthetic Bronze flows through Silver into separate Harbor and Kestrel Gold lakehouses. Manual external shares lead to separate consumer tenants. Security blocks live ontology binding; agent binding and M365 Word verification remain separate gates. No customer-residency or completed live deployment is claimed.
+    subgraph P["Provider tenant / provider workspace — synthetic only"]
+        B["Bronze: 18 source tables per firm"] --> S["Silver: typed, firm-prefixed Delta"]
+        S --> HG["gold_harbor"]
+        S --> KG["gold_kestrel"]
+    end
+    HG -. "Manual external share; live read" .-> HS
+    KG -. "Manual external share; live read" .-> KS
+    subgraph H["Harbor consumer tenant / own workspace"]
+        HS["harbor_data: accepted shortcuts"] -.-> HX["STOP: validate raw-data authorization"]
+        HX -. "Blocked before binding" .-> HO["Own ontology bindings"]
+        HO -. "Public ontology datasource gap" .-> HA["Own published agent / MCP"]
+    end
+    subgraph K["Kestrel consumer tenant / own workspace"]
+        KS["kestrel_data: accepted shortcuts"] -.-> KX["STOP: validate raw-data authorization"]
+        KX -. "Blocked before binding" .-> KO["Same ontology, own bindings"]
+        KO -. "Public ontology datasource gap" .-> KA["Own published agent / MCP"]
+    end
+    HA -. "Separate publication inside Fabric" .-> W["M365 Agent Store; Word proof still required"]
+    C["Portable contract: 13 business entities + MatterAccess; 7 SQL measures"] -.-> HO
+    C -.-> KO
+    classDef gate fill:#fff0e6,stroke:#ba4a00,color:#7c3200,stroke-width:2px;
+    class HX,KX,W gate;

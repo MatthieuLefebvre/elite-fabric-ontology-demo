@@ -53,6 +53,15 @@ def capabilities(config: Config, through_step: int = 8) -> list[dict]:
     return report
 
 
+def print_preflight_table(report: list[dict]) -> None:
+    """Print curated check labels and statuses, never credentials or service bodies."""
+    print("ROLE       CHECK                            STATUS       BLOCKS")
+    print("-" * 72)
+    for row in report:
+        print(f"{row.get('role', 'all'):<10} {row['check']:<32} "
+              f"{row['status']:<12} {'yes' if row.get('blocking') else 'no'}")
+
+
 def tenant_settings_report(ctx: Context, role: str) -> list[dict]:
     """Probe configured settings without inferring scoped effective permissions."""
     identity = ctx.config.identities[role]
@@ -290,6 +299,17 @@ def main(argv: list[str] | None = None, *, preflight_only: bool = False) -> int:
             if not args.dry_run:
                 from azure.identity import ClientSecretCredential
 
+                missing = [
+                    {"role": role, "check": key, "status": "FAIL", "blocking": True}
+                    for role, identity in config.identities.items()
+                    for key in ("tenant_id", "client_id", "client_secret", "capacity_id")
+                    if not getattr(identity, key)
+                ]
+                if missing:
+                    print_preflight_table(missing)
+                    raise UnsupportedCapability(
+                        "CONFIGURATION_REQUIRED: fill the named per-tenant settings privately; no resources created"
+                    )
                 config.validate()
                 for role, identity in config.identities.items():
                     credential = ClientSecretCredential(
@@ -310,6 +330,8 @@ def main(argv: list[str] | None = None, *, preflight_only: bool = False) -> int:
                 report = preflight(ctx, through_step=through)
                 for entry in report:
                     emit("preflight", **entry)
+                if preflight_only or args.preflight_only:
+                    print_preflight_table(report)
                 blocked = any(r["blocking"] for r in report)
                 if preflight_only or args.preflight_only:
                     return 0 if args.dry_run or not blocked else 2
