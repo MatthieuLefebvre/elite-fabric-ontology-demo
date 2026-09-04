@@ -1,0 +1,1 @@
+"""Deterministic, fictional legal-finance source tables (not an agent simulator)."""

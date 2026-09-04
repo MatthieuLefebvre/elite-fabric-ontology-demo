@@ -1,0 +1,30 @@
+# Deliberately authored fictional names; no external name corpus.
+clients:
+  - Meridian Industrial Group
+  - Ashworth Holdings
+  - Northwind Bioscience
+  - Castellan Retail Group
+  - Dunmore Energy Partners
+  - Vantage Freight Systems
+  - Redgrave Manufacturing
+  - Solace Capital
+  - Brindle Orchard Ventures
+  - Ellowen Maritime Cooperative
+  - Fallowmere Textiles
+  - Orison Glassworks
+  - Talverne Instruments
+  - Willowfen Analytics
+  - Wrenford Foods
+matters:
+  - {number: 1, client: 1, name: Meridian — Acquisition of Calder Systems, practice: corporate, fee_arrangement: fixed_fee_capped, case: aged_wip}
+  - {number: 2, client: 1, name: Meridian — Post-completion integration, practice: corporate, parent: 1}
+  - {number: 3, client: 2, name: Ashworth — Regulatory investigation, practice: litigation, case: screened}
+  - {number: 4, client: 3, name: Northwind — Patent portfolio review, practice: ip, case: healthy}
+  - {number: 5, client: 4, name: Castellan — Employment tribunal series, practice: employment, case: employment_overrun}
+  - {number: 6, client: 4, name: Castellan — Lease renegotiations, practice: real_estate, case: lease_overrun}
+  - {number: 7, client: 5, name: Dunmore — Joint venture formation, practice: corporate, currency: GBP}
+  - {number: 8, client: 6, name: Vantage — Contract dispute, practice: litigation, case: proforma_leakage}
+  - {number: 9, client: 7, name: Redgrave — Product liability defence, practice: litigation, case: invoice_leakage}
+  - {number: 10, client: 8, name: Solace — Fund formation, practice: corporate, case: dso_95}
+  - {number: 11, client: 3, name: Northwind — Patent renewal implementation, practice: ip, parent: 4}
+  - {number: 12, client: 4, name: Castellan — Lease completion support, practice: real_estate, parent: 6}

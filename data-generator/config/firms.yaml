@@ -1,0 +1,53 @@
+firms:
+  - slug: harbor
+    name: Harbor & Vance LLP
+    clients: 15
+    matters: 60
+    timekeepers: 40
+    time_entries: 8000
+    partner_name: Alexandra Reyes
+    cash_application_days: 95
+    aged_wip_entries: 200
+    vantage_entries_per_month: 180
+    redgrave_entries_per_month: 30
+    vantage_proforma_percent: 35
+    redgrave_invoice_percent: 20
+  - slug: kestrel
+    name: Kestrel Legal
+    clients: 10
+    matters: 25
+    timekeepers: 15
+    time_entries: 2500
+    partner_name: Iona Vale
+    cash_application_days: 55
+    given_names: [Anwen, Carys, Dewi, Eleri, Idris, Lowri, Nerys, Rhys]
+    surnames: [Brynford, Caerwyn, Llyswood, Penrhos, Trewick]
+    client_names:
+      - Asterwick Engineering
+      - Bellhaven Investments
+      - Cairnwell Therapeutics
+      - Dalesmere Stores
+      - Emberfell Renewables
+      - Foxglade Logistics
+      - Greystone Components
+      - Highmere Asset Management
+      - Inverbrook Farms
+      - Juniper Quay Shipping
+    matter_names:
+      - Asterwick — Purchase of Larchgate Robotics
+      - Asterwick — Systems transition advice
+      - Bellhaven — Compliance inquiry
+      - Cairnwell — Biologics licensing review
+      - Dalesmere — Workforce claims programme
+      - Dalesmere — Warehouse tenancy review
+      - Emberfell — Offshore partnership
+      - Foxglade — Distribution agreement claim
+      - Greystone — Equipment warranty proceedings
+      - Highmere — Infrastructure investment vehicle
+      - Cairnwell — Licence renewal filings
+      - Dalesmere — Tenancy execution assistance
+    aged_wip_entries: 80
+    vantage_entries_per_month: 30
+    redgrave_entries_per_month: 180
+    vantage_proforma_percent: 10
+    redgrave_invoice_percent: 40

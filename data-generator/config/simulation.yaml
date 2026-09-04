@@ -1,0 +1,17 @@
+seed: 42
+as_of: '2026-09-04'
+history_months: 18
+usd_standard_rate_cents: 60000
+gbp_standard_rate_cents: 50000
+negotiated_percent: 90
+time_entry_reduction_percent: 1
+ordinary_proforma_percent: 2
+ordinary_invoice_percent: 1
+quarter_budget_cents: 4000000
+quarter_budget_hours: '100.00'
+quarter_hourly_rate_cents: 40000
+employment_entries: 108
+employment_hours: '1.25'
+lease_entries: 108
+lease_hours: '1.00'
+canary_token: SYNTHETIC_SCREENED_ASHWORTH_CANARY_7E91
