@@ -1,0 +1,1 @@
+"""Delegated Fabric agent evaluation; never a data-plane authorization boundary."""
