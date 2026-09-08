@@ -7,3 +7,4 @@
 *.md text eol=lf
 *.mmd text eol=lf
 *.svg text eol=lf
+examples/isv-ontology-package/* text eol=lf

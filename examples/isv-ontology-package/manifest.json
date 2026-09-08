@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "packageName": "elite-legal-ontology",
+  "packageVersion": "1.0.0",
+  "ontologyIri": "https://isv.example/ontologies/elite-legal/",
+  "versionIri": "https://isv.example/ontologies/elite-legal/1.0.0",
+  "canonicalArtifact": {
+    "path": "ontology.ttl",
+    "format": "Turtle",
+    "mediaType": "text/turtle"
+  },
+  "compatibilityArtifacts": [
+    {
+      "path": "ontology.rdf",
+      "format": "RDF/XML",
+      "mediaType": "application/rdf+xml",
+      "generatedFrom": "ontology.ttl"
+    }
+  ],
+  "sourceContract": "../../fabric/ontology/ontology.yaml",
+  "contents": {
+    "classes": 14,
+    "objectProperties": 29,
+    "datatypeProperties": 6,
+    "instanceDataIncluded": false
+  },
+  "excludedDeploymentConfiguration": [
+    "Fabric workspace and item identifiers",
+    "Lakehouse and semantic model bindings",
+    "Credentials and authorization policy",
+    "Customer data and ontology instances"
+  ],
+  "license": "MIT",
+  "status": "illustrative-package-example"
+}

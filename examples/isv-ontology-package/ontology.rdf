@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rdf:RDF
+   xmlns:owl="http://www.w3.org/2002/07/owl#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/InvoiceBillsMatter">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">An issued invoice bills one matter.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Invoice"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/TimekeeperMatterAccess">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A timekeeper has an informational matter access adjacency.</rdfs:label>
+    <rdfs:comment xml:lang="en">Informational only; this relationship is not an authorization grant.</rdfs:comment>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Timekeeper"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/AdjustmentReducesProforma">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">An adjustment reduces a proforma.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Adjustment"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Proforma"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/ProformaReviewedByTimekeeper">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A proforma is assigned to a reviewer.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Proforma"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Timekeeper"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/InvoiceSettledByPayment">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">An invoice is settled by one or more payments.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Invoice"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Payment"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/AdjustmentApprovedByTimekeeper">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">An adjustment records its approving timekeeper.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Adjustment"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Timekeeper"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/MatterWorkedByPracticeGroup">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A matter is worked by a practice group.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/PracticeGroup"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/MatterMeasuredAgainstBudget">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A matter is measured against a budget.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Budget"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/MatterResponsiblePartner">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A matter has a responsible partner who owns delivery.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Timekeeper"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/DisbursementChargedToMatter">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A cost is recorded against a matter.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Disbursement"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/MatterAccessForTimekeeper">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">An access decision identifies a timekeeper.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/MatterAccess"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Timekeeper"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/TimeEntryAgainstMatter">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">Work was recorded against a matter.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/TimeEntry"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/Matter">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Matter</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/AdjustmentReducesTimeEntry">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">An adjustment reduces a time entry.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Adjustment"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/TimeEntry"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/ClientImposesBillingGuideline">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A client imposes a billing guideline.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Client"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/BillingGuideline"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/LegalEntity">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Legal entity</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/Client">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Client</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/MatterOriginatingPartner">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A matter has an originating partner credited with the engagement.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Timekeeper"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/MatterBillingPartner">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A matter has a billing partner who owns billing decisions.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Timekeeper"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Ontology"/>
+    <rdfs:label xml:lang="en">Elite legal financial ontology</rdfs:label>
+    <rdfs:comment xml:lang="en">Portable legal financial schema for an illustrative Microsoft Fabric ISV package.</rdfs:comment>
+    <owl:versionIRI rdf:resource="https://isv.example/ontologies/elite-legal/1.0.0"/>
+    <owl:versionInfo>1.0.0</owl:versionInfo>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/status">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="en">Status</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/AdjustmentReducesInvoice">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">An adjustment reduces an invoice.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Adjustment"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Invoice"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/Adjustment">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Adjustment</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/DisbursementGatheredIntoProforma">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">Unbilled costs are gathered into a proforma.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Disbursement"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Proforma"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/Disbursement">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Disbursement</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/TimeEntryRecordedByTimekeeper">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">Work was recorded by a timekeeper.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/TimeEntry"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Timekeeper"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/PracticeGroupLedByTimekeeper">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A practice group is led by a timekeeper.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/PracticeGroup"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Timekeeper"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/name">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="en">Name</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/ClientServedThroughMatter">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A client is served through one or more matters.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Client"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/eventDate">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="en">Event date</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#date"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/Timekeeper">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Timekeeper</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/MatterBillsFromLegalEntity">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A matter bills from a legal entity.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/LegalEntity"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/Proforma">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Proforma</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/BillingGuideline">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Billing guideline</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/InvoiceSubjectToBillingGuideline">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">An invoice is subject to a billing guideline.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Invoice"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/BillingGuideline"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/ProformaIssuedAsInvoice">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A reviewed proforma is issued as an invoice.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Proforma"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Invoice"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/amountCents">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="en">Amount in minor currency units</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#long"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/PracticeGroup">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Practice group</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/Invoice">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Invoice</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/MatterAccess">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Matter access decision</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/ProformaForMatter">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A proforma gathers work for one matter.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Proforma"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/Payment">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Payment</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/Budget">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Budget</rdfs:label>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/MatterAccessForMatter">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">An access decision identifies a matter.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/MatterAccess"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/currency">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="en">Currency</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/TimeEntryGatheredIntoProforma">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">Unbilled work is gathered into a proforma.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/TimeEntry"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Proforma"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/identifier">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+    <rdfs:label xml:lang="en">Identifier</rdfs:label>
+    <rdfs:range rdf:resource="http://www.w3.org/2001/XMLSchema#string"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/MatterPhaseOfParent">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A sub-matter is a phase of a parent matter.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Matter"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/ClientRelationshipPartner">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+    <rdfs:label xml:lang="en">A client has a relationship partner.</rdfs:label>
+    <rdfs:domain rdf:resource="https://isv.example/ontologies/elite-legal/Client"/>
+    <rdfs:range rdf:resource="https://isv.example/ontologies/elite-legal/Timekeeper"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="https://isv.example/ontologies/elite-legal/TimeEntry">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+    <rdfs:label xml:lang="en">Time entry</rdfs:label>
+  </rdf:Description>
+</rdf:RDF>

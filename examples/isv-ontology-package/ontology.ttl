@@ -1,0 +1,202 @@
+@prefix elite: <https://isv.example/ontologies/elite-legal/> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+elite: a owl:Ontology ;
+    rdfs:label "Elite legal financial ontology"@en ;
+    rdfs:comment "Portable legal financial schema for an illustrative Microsoft Fabric ISV package."@en ;
+    owl:versionIRI <https://isv.example/ontologies/elite-legal/1.0.0> ;
+    owl:versionInfo "1.0.0" .
+
+# Entity classes
+
+elite:Client a owl:Class ; rdfs:label "Client"@en .
+elite:Matter a owl:Class ; rdfs:label "Matter"@en .
+elite:Timekeeper a owl:Class ; rdfs:label "Timekeeper"@en .
+elite:PracticeGroup a owl:Class ; rdfs:label "Practice group"@en .
+elite:LegalEntity a owl:Class ; rdfs:label "Legal entity"@en .
+elite:TimeEntry a owl:Class ; rdfs:label "Time entry"@en .
+elite:Disbursement a owl:Class ; rdfs:label "Disbursement"@en .
+elite:Proforma a owl:Class ; rdfs:label "Proforma"@en .
+elite:Invoice a owl:Class ; rdfs:label "Invoice"@en .
+elite:Payment a owl:Class ; rdfs:label "Payment"@en .
+elite:Adjustment a owl:Class ; rdfs:label "Adjustment"@en .
+elite:Budget a owl:Class ; rdfs:label "Budget"@en .
+elite:BillingGuideline a owl:Class ; rdfs:label "Billing guideline"@en .
+elite:MatterAccess a owl:Class ; rdfs:label "Matter access decision"@en .
+
+# Representative datatype properties. Fabric source bindings remain deployment configuration.
+
+elite:identifier a owl:DatatypeProperty ;
+    rdfs:label "Identifier"@en ;
+    rdfs:range xsd:string .
+
+elite:name a owl:DatatypeProperty ;
+    rdfs:label "Name"@en ;
+    rdfs:range xsd:string .
+
+elite:currency a owl:DatatypeProperty ;
+    rdfs:label "Currency"@en ;
+    rdfs:range xsd:string .
+
+elite:amountCents a owl:DatatypeProperty ;
+    rdfs:label "Amount in minor currency units"@en ;
+    rdfs:range xsd:long .
+
+elite:eventDate a owl:DatatypeProperty ;
+    rdfs:label "Event date"@en ;
+    rdfs:range xsd:date .
+
+elite:status a owl:DatatypeProperty ;
+    rdfs:label "Status"@en ;
+    rdfs:range xsd:string .
+
+# Object properties mirror the portable relationship contract.
+
+elite:ClientServedThroughMatter a owl:ObjectProperty ;
+    rdfs:label "A client is served through one or more matters."@en ;
+    rdfs:domain elite:Client ;
+    rdfs:range elite:Matter .
+
+elite:MatterWorkedByPracticeGroup a owl:ObjectProperty ;
+    rdfs:label "A matter is worked by a practice group."@en ;
+    rdfs:domain elite:Matter ;
+    rdfs:range elite:PracticeGroup .
+
+elite:MatterResponsiblePartner a owl:ObjectProperty ;
+    rdfs:label "A matter has a responsible partner who owns delivery."@en ;
+    rdfs:domain elite:Matter ;
+    rdfs:range elite:Timekeeper .
+
+elite:MatterBillingPartner a owl:ObjectProperty ;
+    rdfs:label "A matter has a billing partner who owns billing decisions."@en ;
+    rdfs:domain elite:Matter ;
+    rdfs:range elite:Timekeeper .
+
+elite:MatterOriginatingPartner a owl:ObjectProperty ;
+    rdfs:label "A matter has an originating partner credited with the engagement."@en ;
+    rdfs:domain elite:Matter ;
+    rdfs:range elite:Timekeeper .
+
+elite:MatterBillsFromLegalEntity a owl:ObjectProperty ;
+    rdfs:label "A matter bills from a legal entity."@en ;
+    rdfs:domain elite:Matter ;
+    rdfs:range elite:LegalEntity .
+
+elite:MatterPhaseOfParent a owl:ObjectProperty ;
+    rdfs:label "A sub-matter is a phase of a parent matter."@en ;
+    rdfs:domain elite:Matter ;
+    rdfs:range elite:Matter .
+
+elite:TimeEntryAgainstMatter a owl:ObjectProperty ;
+    rdfs:label "Work was recorded against a matter."@en ;
+    rdfs:domain elite:TimeEntry ;
+    rdfs:range elite:Matter .
+
+elite:TimeEntryRecordedByTimekeeper a owl:ObjectProperty ;
+    rdfs:label "Work was recorded by a timekeeper."@en ;
+    rdfs:domain elite:TimeEntry ;
+    rdfs:range elite:Timekeeper .
+
+elite:DisbursementChargedToMatter a owl:ObjectProperty ;
+    rdfs:label "A cost is recorded against a matter."@en ;
+    rdfs:domain elite:Disbursement ;
+    rdfs:range elite:Matter .
+
+elite:TimeEntryGatheredIntoProforma a owl:ObjectProperty ;
+    rdfs:label "Unbilled work is gathered into a proforma."@en ;
+    rdfs:domain elite:TimeEntry ;
+    rdfs:range elite:Proforma .
+
+elite:DisbursementGatheredIntoProforma a owl:ObjectProperty ;
+    rdfs:label "Unbilled costs are gathered into a proforma."@en ;
+    rdfs:domain elite:Disbursement ;
+    rdfs:range elite:Proforma .
+
+elite:ProformaIssuedAsInvoice a owl:ObjectProperty ;
+    rdfs:label "A reviewed proforma is issued as an invoice."@en ;
+    rdfs:domain elite:Proforma ;
+    rdfs:range elite:Invoice .
+
+elite:ProformaForMatter a owl:ObjectProperty ;
+    rdfs:label "A proforma gathers work for one matter."@en ;
+    rdfs:domain elite:Proforma ;
+    rdfs:range elite:Matter .
+
+elite:InvoiceBillsMatter a owl:ObjectProperty ;
+    rdfs:label "An issued invoice bills one matter."@en ;
+    rdfs:domain elite:Invoice ;
+    rdfs:range elite:Matter .
+
+elite:InvoiceSettledByPayment a owl:ObjectProperty ;
+    rdfs:label "An invoice is settled by one or more payments."@en ;
+    rdfs:domain elite:Invoice ;
+    rdfs:range elite:Payment .
+
+elite:AdjustmentReducesTimeEntry a owl:ObjectProperty ;
+    rdfs:label "An adjustment reduces a time entry."@en ;
+    rdfs:domain elite:Adjustment ;
+    rdfs:range elite:TimeEntry .
+
+elite:AdjustmentReducesProforma a owl:ObjectProperty ;
+    rdfs:label "An adjustment reduces a proforma."@en ;
+    rdfs:domain elite:Adjustment ;
+    rdfs:range elite:Proforma .
+
+elite:AdjustmentReducesInvoice a owl:ObjectProperty ;
+    rdfs:label "An adjustment reduces an invoice."@en ;
+    rdfs:domain elite:Adjustment ;
+    rdfs:range elite:Invoice .
+
+elite:MatterMeasuredAgainstBudget a owl:ObjectProperty ;
+    rdfs:label "A matter is measured against a budget."@en ;
+    rdfs:domain elite:Matter ;
+    rdfs:range elite:Budget .
+
+elite:ClientImposesBillingGuideline a owl:ObjectProperty ;
+    rdfs:label "A client imposes a billing guideline."@en ;
+    rdfs:domain elite:Client ;
+    rdfs:range elite:BillingGuideline .
+
+elite:InvoiceSubjectToBillingGuideline a owl:ObjectProperty ;
+    rdfs:label "An invoice is subject to a billing guideline."@en ;
+    rdfs:domain elite:Invoice ;
+    rdfs:range elite:BillingGuideline .
+
+elite:TimekeeperMatterAccess a owl:ObjectProperty ;
+    rdfs:label "A timekeeper has an informational matter access adjacency."@en ;
+    rdfs:comment "Informational only; this relationship is not an authorization grant."@en ;
+    rdfs:domain elite:Timekeeper ;
+    rdfs:range elite:Matter .
+
+elite:MatterAccessForTimekeeper a owl:ObjectProperty ;
+    rdfs:label "An access decision identifies a timekeeper."@en ;
+    rdfs:domain elite:MatterAccess ;
+    rdfs:range elite:Timekeeper .
+
+elite:MatterAccessForMatter a owl:ObjectProperty ;
+    rdfs:label "An access decision identifies a matter."@en ;
+    rdfs:domain elite:MatterAccess ;
+    rdfs:range elite:Matter .
+
+elite:ClientRelationshipPartner a owl:ObjectProperty ;
+    rdfs:label "A client has a relationship partner."@en ;
+    rdfs:domain elite:Client ;
+    rdfs:range elite:Timekeeper .
+
+elite:PracticeGroupLedByTimekeeper a owl:ObjectProperty ;
+    rdfs:label "A practice group is led by a timekeeper."@en ;
+    rdfs:domain elite:PracticeGroup ;
+    rdfs:range elite:Timekeeper .
+
+elite:ProformaReviewedByTimekeeper a owl:ObjectProperty ;
+    rdfs:label "A proforma is assigned to a reviewer."@en ;
+    rdfs:domain elite:Proforma ;
+    rdfs:range elite:Timekeeper .
+
+elite:AdjustmentApprovedByTimekeeper a owl:ObjectProperty ;
+    rdfs:label "An adjustment records its approving timekeeper."@en ;
+    rdfs:domain elite:Adjustment ;
+    rdfs:range elite:Timekeeper .

@@ -172,11 +172,13 @@ reproducible commands, and exact remaining blockers.
 `data-generator/` provides configurable synthetic reference data, deliberately planted
 billing cases, and relational invariants. `fabric/notebooks/` contains real PySpark
 bronze/silver/gold transformations. `fabric/ontology/` is the portable domain contract;
-version-sensitive translation belongs in one adapter. `fabric/steps/` separates the
-resource lifecycle into repeatable stages. `agent/` holds business instructions,
-rehearsal questions, and a fail-closed evaluation harness. `docs/` explains architecture,
-design choices, deployment, delivery, and adaptation; `scripts/` makes the entry points
-consistent across Windows and Unix.
+version-sensitive translation belongs in one adapter. The
+[ISV ontology package example](examples/isv-ontology-package/README.md) demonstrates a
+versioned Turtle distribution with a generated RDF/XML compatibility artifact.
+`fabric/steps/` separates the resource lifecycle into repeatable stages. `agent/` holds
+business instructions, rehearsal questions, and a fail-closed evaluation harness.
+`docs/` explains architecture, design choices, deployment, delivery, and adaptation;
+`scripts/` makes the entry points consistent across Windows and Unix.
 
 ## Reuse beyond this workshop
 
