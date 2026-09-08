@@ -33,6 +33,29 @@ def request_id(value: str | None) -> str | None:
         return None
 
 
+def operation_url(response: httpx.Response) -> str:
+    """Build a trusted polling URL from the documented operation ID when available."""
+    operation_id = request_id(response.headers.get("x-ms-operation-id"))
+    if operation_id:
+        return trusted_url(f"operations/{operation_id}")
+    location = response.headers.get("Location")
+    if not location:
+        raise FabricError("Accepted operation has no polling coordinate; reconcile manually")
+    try:
+        return trusted_url(location)
+    except FabricError:
+        parts = urlsplit(location)
+        segments = parts.path.strip("/").split("/")
+        if (parts.scheme != "https" or parts.username or parts.password or parts.query or parts.fragment
+                or len(segments) != 8 or segments[0:2] != ["v1", "workspaces"]
+                or segments[3] != "items" or segments[5:7] != ["jobs", "instances"]):
+            raise
+        workspace_id, item_id, job_id = map(live_id, (segments[2], segments[4], segments[7]))
+        return trusted_url(
+            f"workspaces/{workspace_id}/items/{item_id}/jobs/instances/{job_id}"
+        )
+
+
 class FabricError(RuntimeError):
     def __init__(self, message: str, *, status: int | None = None):
         super().__init__(message)
@@ -151,9 +174,6 @@ class FabricClient:
                  request_id=request_id(response.headers.get("request-id")
                                        or response.headers.get("x-ms-request-id")),
                  attempt=attempt)
-            # Validate even unused Location headers, but never follow HTTP redirects.
-            if response.headers.get("Location"):
-                trusted_url(response.headers["Location"])
             if 200 <= response.status_code < 300 or response.status_code in allow_status:
                 return response
             transient = response.status_code == 429 or (
@@ -217,10 +237,7 @@ class FabricClient:
     def poll(self, response: httpx.Response, *, job: bool = False) -> dict:
         if response.status_code != 202:
             return self.document(response)
-        location = response.headers.get("Location")
-        if not location:
-            raise FabricError("Accepted operation has no Location; reconcile manually")
-        location = trusted_url(location)
+        location = operation_url(response)
         deadline = self.clock() + self.operation_timeout
         self._wait(retry_after(response), deadline)
         for _ in range(10000):
@@ -230,11 +247,15 @@ class FabricClient:
             if status == ("Completed" if job else "Succeeded"):
                 if job:
                     return data
-                # The documented LRO result endpoint; never infer an item ID from operation ID.
-                result = update.headers.get("Location")
-                if not result or result.rstrip("/") == location.rstrip("/"):
-                    result = location.rstrip("/") + "/result"
-                return self.document(self.request("GET", trusted_url(result), deadline=deadline))
+                # The documented result endpoint is derived from the trusted operation URL.
+                result = self.request("GET", location.rstrip("/") + "/result",
+                                      deadline=deadline, allow_status=(400,))
+                document = self.document(result)
+                if result.status_code == 400:
+                    if document.get("errorCode") == "OperationHasNoResult":
+                        return {}
+                    raise FabricError("Fabric operation result failed", status=400)
+                return document
             if status in ("Failed", "Cancelled", "Canceled", "Deduped"):
                 raise FabricError(f"Fabric {'job' if job else 'operation'} {status}")
             if status not in ("NotStarted", "Running", "InProgress", "Undefined"):

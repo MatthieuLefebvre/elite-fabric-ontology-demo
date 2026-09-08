@@ -160,6 +160,42 @@ def test_exact_config_defaults_and_moved_files(monkeypatch):
         assert not (ROOT / name).exists()
 
 
+def test_azure_cli_simulation_does_not_require_application_credentials(tmp_path):
+    """Explicit user authentication retains tenant and capacity validation."""
+    tenant = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    capacity = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    identities = {
+        role: Identity(role, tenant_id=tenant, capacity_id=capacity)
+        for role in ("provider", "harbor", "kestrel")
+    }
+    Config(identities, auth_mode="azure_cli", simulation=True,
+           state_path=tmp_path / "state.json").validate()
+
+
+def test_dotenv_can_select_simulation_and_supported_deployment_depth(tmp_path):
+    env = tmp_path / "simulation.env"
+    env.write_text(
+        "DEPLOYMENT_TOPOLOGY=single_tenant_simulation\n"
+        "DEPLOYMENT_THROUGH_STEP=4\n",
+        encoding="utf-8",
+    )
+    cfg = load_config(env)
+    assert cfg.simulation is True
+    assert cfg.shared_consumers is False
+    assert cfg.deployment_through_step == 4
+
+
+def test_azure_cli_user_auth_does_not_require_service_principal_attestation(tmp_path):
+    cfg = Config({"provider": Identity("provider")}, auth_mode="azure_cli")
+    ctx = Context(cfg, State(tmp_path / "state.json", cfg.demo_id), clients={})
+    report = deploy.tenant_settings_report(ctx, "provider")
+    assert report == [{
+        "role": "provider", "check": "core_user_authorization", "status": "OBSERVED",
+        "blocking": False,
+        "detail": "Explicit user mode relies on the preceding token, capacity and workspace access checks",
+    }]
+
+
 @pytest.mark.parametrize("collection_key", ["value", "tenantSettings"])
 def test_tenant_settings_disabled_setting_blocks_across_pages(tmp_path, collection_key):
     """Both explicitly allowed envelopes retain pagination and disabled-setting failures."""

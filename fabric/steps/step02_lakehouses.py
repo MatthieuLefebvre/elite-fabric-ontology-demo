@@ -5,6 +5,12 @@ from fabric.steps.common import Context
 
 
 def run(ctx: Context) -> None:
+    for role in ctx.config.workspace_roles:
+        for index, name in enumerate(ctx.config.folder_path):
+            ctx.plan(2, "ensure_folder", role=role, name=name,
+                     resource=f"{role}.folder.{index}", workspace=ctx.workspace(role))
+        if not ctx.dry_run:
+            ctx.ensure_folder_path(role)
     resources = [("provider", name) for name in ("bronze", "silver", "gold_harbor", "gold_kestrel")]
     resources += [(firm, firm + "_data") for firm in FIRMS]
     for role, name in resources:

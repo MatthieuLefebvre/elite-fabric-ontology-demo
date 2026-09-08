@@ -312,7 +312,7 @@ exist; this adapter deliberately does not override it.
 The implementation follows the documented
 [ontology item definition](https://learn.microsoft.com/en-us/rest/api/fabric/articles/item-management/definitions/ontology-definition)
 and [Data Agent item definition](https://learn.microsoft.com/en-us/rest/api/fabric/articles/item-management/definitions/data-agent-definition),
-checked 2026-09-04. Preview service acceptance still needs tenant verification.
+checked 2026-09-07. Preview service acceptance still needs tenant verification.
 
 `build_ontology_definition(contract, workspace_id, lakehouse_id, display_name)`
 returns exactly `{"parts": [...]}`. Each part has `path`, a UTF-8 JSON Base64
@@ -326,11 +326,12 @@ properties and an empty timeseries list. Non-time-series bindings map materializ
 Gold column names to property IDs, using a LakehouseTable source with workspace,
 item and table. No `sourceSchema` is sent for this non-schema lakehouse contract.
 
-Relationship definitions contain only ID, namespace, namespace type, name, source
-and target entity IDs. Their contextualizations identify the physical edge table
-and bind its source/target columns to the actual endpoint key property IDs. No
-description, SQL predicate, cardinality, measure DSL or relationship attributes are
-inserted into public payloads.
+Entity, property, and relationship definitions carry descriptions through the
+documented `semanticEnrichment` field. Relationship definitions also contain ID,
+namespace, namespace type, name, and source/target entity IDs. Their contextualizations
+identify the physical edge table and bind its columns to endpoint key property IDs.
+SQL predicates, cardinality, measure DSL, and relationship attributes are not inserted
+as invented public fields. JSON discriminator order is preserved for the preview importer.
 
 Entity, property and relationship IDs are stable positive signed-64-bit strings
 derived from names with SHA-256 and checked for collisions. Property identity is

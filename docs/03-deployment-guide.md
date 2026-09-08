@@ -1,10 +1,14 @@
 # Deployment guide: supported core, explicit live blockers
 
-Public contracts were checked on **2026-09-04**. This implementation has not been
-live-certified. Actual notebook templates, a portable ontology adapter, and offline
-tests are included; local success does not prove service acceptance, delegated
-authorization, or Word integration. The local suite and lint pass on Python 3.12.10;
-no live tenant credentials were supplied and neither notebook ran on Fabric Spark.
+Public contracts were rechecked on **2026-09-07**. Core steps 1-4, including all four
+Spark transformation jobs, completed live using Azure CLI user authentication in
+single-tenant simulation. Firm-specific semantic models and Power BI reports were
+also deployed. A separately approved firm-wide synthetic administrator path now has
+two queryable ontologies and ontology-backed data agents; Harbor's published MCP
+runtime answered an exploratory query. This does not certify the blocked secured
+workflow, partner authorization, full agent evaluation, Microsoft 365 publication,
+or Word integration. See [analytics status](06-analytics-demo.md) for live evidence,
+MCP setup, and the remaining browser-policy and security blockers.
 
 ## Capability matrix
 
@@ -75,6 +79,10 @@ Shared CLI options:
 - `--teardown`: remove eligible owned resources; combine with --dry-run for a plan.
   Incompatible with step selection and preflight-only.
 
+`DEPLOYMENT_TOPOLOGY` (`three_independent_tenants`, `shared_consumer_tenant`, or
+`single_tenant_simulation`) and `DEPLOYMENT_THROUGH_STEP` provide dotenv defaults when
+the corresponding CLI flags are omitted. Explicit CLI selectors still take precedence.
+
 Exit codes: **0** selected work/plan completed; **2** configuration/service/capability
 blocker; **1** unexpected suppressed failure. No exit code certifies partner security,
 graph refresh, delegated evaluation or Word publishing.
@@ -82,20 +90,26 @@ graph refresh, delegated evaluation or Word publishing.
 ## Identity, topology and permissions
 
 [.env.example](../.env.example) documents all consumed settings and delegated evaluator
-integration variables. Keep credentials outside source control. Provider, Harbor and
-Kestrel each use separate ClientSecretCredential and FabricClient objects. No default
-credential chain or provider fallback is used. Scopes are:
+integration variables. Keep credentials outside source control. `AUTH_MODE` defaults to
+`service_principal`, using separate `ClientSecretCredential` and `FabricClient` objects
+for Provider, Harbor, and Kestrel. For an attended single-tenant workshop,
+`AUTH_MODE=azure_cli` explicitly uses the user already signed in with `az login`; it is
+not a default credential-chain fallback. Scopes are:
 
 - Fabric: `https://api.fabric.microsoft.com/.default`
 - OneLake: `https://storage.azure.com/.default`
 
-Deployment application identities are not the delegated evaluator. The evaluator uses
+Deployment credentials are not the delegated evaluator. The evaluator uses
 `HARBOR_PARTNER_OBJECT_ID`, `HARBOR_USER_CLIENT_ID` and Harbor's tenant for device login,
 not provider credentials or an application token. Kestrel equivalents are reserved.
 User object IDs are actual immutable Entra IDs, not generator timekeeper/app IDs;
 the operator must verify that mapping. Deployment does not handle delegated device
 codes. Evaluation displays the device challenge only in the local console; never
 paste it or a token into an agent conversation or store it in a report.
+
+`FABRIC_FOLDER_PATH` optionally specifies a slash-delimited nested folder path. Step 02
+adopts exact existing path segments or creates missing ones independently in each
+workspace, then creates all demo items in the final folder. Folder APIs are preview.
 
 ### Normal: three independent tenants, three workspaces
 

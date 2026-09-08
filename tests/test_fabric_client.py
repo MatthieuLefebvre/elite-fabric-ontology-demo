@@ -10,6 +10,7 @@ from fabric.fabric_client import (
     FabricClient,
     FabricError,
     FabricTimeout,
+    operation_url,
     retry_after,
     trusted_url,
 )
@@ -54,6 +55,26 @@ def test_untrusted_host_rejected_before_token(url):
 
 def test_relative_trusted_url():
     assert trusted_url("workspaces") == "https://api.fabric.microsoft.com/v1/workspaces"
+
+
+@pytest.mark.parametrize("error_code", ["OperationHasNoResult", "InvalidRequest"])
+def test_succeeded_operation_without_result(error_code):
+    def handler(request):
+        if request.url.path.endswith("/result"):
+            return httpx.Response(400, json={"errorCode": error_code})
+        return httpx.Response(200, json={"status": "Succeeded"})
+
+    clock = Clock()
+    api = client(handler, sleep=clock.sleep, clock=clock)
+    response = httpx.Response(202, headers={"Location": "https://api.fabric.microsoft.com/v1/operations/demo"})
+    try:
+        if error_code == "OperationHasNoResult":
+            assert api.poll(response) == {}
+        else:
+            with pytest.raises(FabricError, match="result failed"):
+                api.poll(response)
+    finally:
+        api.close()
 
 
 def test_pagination_uri_and_token():
@@ -215,7 +236,7 @@ def test_hostile_location_and_redirect_not_followed():
     api = client(lambda r: calls.append(r) or httpx.Response(202, headers={"Location": "https://evil.example/v1/x"}))
     try:
         with pytest.raises(FabricError, match="Untrusted"):
-            api.request("POST", "workspaces")
+            api.mutate("POST", "workspaces")
         assert len(calls) == 1
     finally:
         api.close()
@@ -223,6 +244,58 @@ def test_hostile_location_and_redirect_not_followed():
     try:
         with pytest.raises(FabricError, match="302"):
             api.get("workspaces")
+    finally:
+        api.close()
+
+
+def test_operation_id_takes_precedence_over_untrusted_location():
+    operation_id = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        if request.method == "POST":
+            return httpx.Response(202, headers={
+                "Location": "https://regional.example/operation",
+                "x-ms-operation-id": operation_id,
+                "Retry-After": "0",
+            })
+        if request.url.path.endswith("/result"):
+            return httpx.Response(200, json={"id": "created"})
+        return httpx.Response(200, headers={"Location": "https://evil.example/result"},
+                              json={"status": "Succeeded"})
+
+    api = client(handler)
+    try:
+        assert api.mutate("POST", "workspaces") == {"id": "created"}
+        assert calls[1].url.path == f"/v1/operations/{operation_id}"
+    finally:
+        api.close()
+
+
+def test_regional_job_location_is_rebuilt_on_trusted_api_host():
+    workspace_id = "11111111-1111-4111-8111-111111111111"
+    item_id = "22222222-2222-4222-8222-222222222222"
+    job_id = "33333333-3333-4333-8333-333333333333"
+    response = httpx.Response(202, headers={
+        "Location": (f"https://regional.example/v1/workspaces/{workspace_id}/items/{item_id}"
+                     f"/jobs/instances/{job_id}"),
+    })
+    assert operation_url(response) == (
+        f"https://api.fabric.microsoft.com/v1/workspaces/{workspace_id}/items/{item_id}"
+        f"/jobs/instances/{job_id}"
+    )
+
+
+def test_completed_create_ignores_unused_regional_location():
+    api = client(lambda request: httpx.Response(
+        201,
+        headers={"Location": "https://regional.example/resource"},
+        json={"id": "11111111-1111-4111-8111-111111111111"},
+    ))
+    try:
+        response = api.request("POST", "workspaces", body={"displayName": "demo"})
+        assert response.status_code == 201
     finally:
         api.close()
 

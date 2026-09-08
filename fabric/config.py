@@ -25,12 +25,15 @@ class Identity:
     admin_attestation: str = field(default="", repr=False)
     core_setting_names: tuple[str, ...] = ()
 
-    def validate(self) -> None:
-        for key in ("tenant_id", "client_id", "capacity_id"):
+    def validate(self, *, require_client_credentials: bool = True) -> None:
+        keys = ("tenant_id", "capacity_id")
+        if require_client_credentials:
+            keys += ("client_id",)
+        for key in keys:
             if not getattr(self, key):
                 raise ValueError(f"Missing {self.role.upper()}_{key.upper()}")
             live_id(getattr(self, key))
-        if not self.client_secret:
+        if require_client_credentials and not self.client_secret:
             raise ValueError(f"Missing {self.role.upper()}_CLIENT_SECRET")
         if self.workspace_id:
             live_id(self.workspace_id)
@@ -40,6 +43,9 @@ class Identity:
 class Config:
     identities: dict[str, Identity]
     demo_id: str = "elite_demo"
+    auth_mode: str = "service_principal"
+    folder_path: tuple[str, ...] = ()
+    deployment_through_step: int = 8
     simulation: bool = False
     shared_consumers: bool = False
     data_dir: Path = ROOT / "data"
@@ -71,10 +77,19 @@ class Config:
 
     def validate(self) -> None:
         safe_name(self.demo_id)
+        if self.auth_mode not in ("service_principal", "azure_cli"):
+            raise ValueError("AUTH_MODE must be service_principal or azure_cli")
+        if not 1 <= self.deployment_through_step <= 8:
+            raise ValueError("DEPLOYMENT_THROUGH_STEP must be between 1 and 8")
+        if self.simulation and self.shared_consumers:
+            raise ValueError("Deployment topology modes are mutually exclusive")
+        if any(not part or part in (".", "..") or any(ord(char) < 32 for char in part)
+               for part in self.folder_path):
+            raise ValueError("FABRIC_FOLDER_PATH contains an invalid path segment")
         if not 1 <= self.timeout <= 86400:
             raise ValueError("OPERATION_TIMEOUT_SECONDS must be between 1 and 86400")
         for identity in self.identities.values():
-            identity.validate()
+            identity.validate(require_client_credentials=self.auth_mode == "service_principal")
         tenants = [live_id(self.identities[r].tenant_id) for r in ("provider", *FIRMS)]
         if self.simulation:
             if len(set(tenants)) != 1:
@@ -112,6 +127,13 @@ def load_config(path: str | Path | None = None, *, simulation: bool = False,
         p = Path(val(key, default)).expanduser()
         return p.resolve() if p.is_absolute() else (ROOT / p).resolve()
 
+    folder_path = tuple(part.strip() for part in val("FABRIC_FOLDER_PATH").split("/")
+                        if part.strip())
+    topology = val("DEPLOYMENT_TOPOLOGY", "three_independent_tenants").lower()
+    if topology not in ("three_independent_tenants", "shared_consumer_tenant",
+                        "single_tenant_simulation"):
+        raise ValueError("Invalid DEPLOYMENT_TOPOLOGY")
+
     identities = {}
     for role in ("provider", *FIRMS):
         prefix = role.upper()
@@ -123,7 +145,11 @@ def load_config(path: str | Path | None = None, *, simulation: bool = False,
         )
     return Config(
         identities=identities, demo_id=safe_name(val("DEMO_ID", "elite_demo")),
-        simulation=simulation, shared_consumers=shared_consumers,
+        auth_mode=val("AUTH_MODE", "service_principal").lower(),
+        folder_path=folder_path,
+        deployment_through_step=int(val("DEPLOYMENT_THROUGH_STEP", "8")),
+        simulation=simulation or topology == "single_tenant_simulation",
+        shared_consumers=shared_consumers or topology == "shared_consumer_tenant",
         data_dir=local("DATA_DIR", "data"), state_path=local("FABRIC_STATE_PATH", ".state/fabric-state.json"),
         ontology_path=local("ONTOLOGY_PATH", "fabric/ontology/ontology.yaml"),
         notebook01=local("NOTEBOOK01_PATH", "fabric/notebooks/01_bronze_to_silver.ipynb"),

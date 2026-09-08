@@ -20,6 +20,7 @@ from fabric.fabric_client import (  # noqa: E402
     FabricClient,
     FabricError,
     emit,
+    live_id,
 )
 from fabric.state import State  # noqa: E402
 from fabric.steps.common import (  # noqa: E402
@@ -65,6 +66,10 @@ def print_preflight_table(report: list[dict]) -> None:
 def tenant_settings_report(ctx: Context, role: str) -> list[dict]:
     """Probe configured settings without inferring scoped effective permissions."""
     identity = ctx.config.identities[role]
+    if ctx.config.auth_mode == "azure_cli":
+        return [{"role": role, "check": "core_user_authorization", "status": "OBSERVED",
+                 "blocking": False,
+                 "detail": "Explicit user mode relies on the preceding token, capacity and workspace access checks"}]
     report = []
     try:
         settings = ctx.clients[role].list("admin/tenantsettings", collection_keys=("value", "tenantSettings"))
@@ -103,7 +108,7 @@ def tenant_settings_report(ctx: Context, role: str) -> list[dict]:
                    "status": "ATTESTED" if attested else "UNKNOWN",
                    "blocking": explicit_disabled or not attested,
                    "detail": "Explicit admin review reference supplied (not probed)" if attested else
-                   "Require *_ADMIN_ATTESTATION: reviewed SP Fabric APIs, workspace creation, scope membership and capacity assignment",
+                   "Require *_ADMIN_ATTESTATION: reviewed identity API access, workspace creation, scope membership and capacity assignment",
                    "configured_settings_probed": all_probed})
     return report
 
@@ -125,21 +130,25 @@ def preflight(ctx: Context, *, through_step: int = 8, local_inputs: bool = True)
             report.append({"role": role, "check": "token", "status": "PASS", "blocking": False})
         except Exception:
             report.append({"role": role, "check": "token", "status": "FAIL", "blocking": True,
-                           "detail": "Client credentials token acquisition failed; details suppressed"})
+                           "detail": "Configured credential token acquisition failed; details suppressed"})
             continue
         try:
             capacities = ctx.clients[role].list("capacities")
-            capacity = next((c for c in capacities if c.get("id") == identity.capacity_id), None)
+            capacity_id = live_id(identity.capacity_id)
+            capacity = next((c for c in capacities if live_id(c.get("id")) == capacity_id), None)
             active = bool(capacity and capacity.get("state") == "Active")
-            report.append({"role": role, "check": "capacity_access_active", "status": "PASS" if active else "FAIL",
-                           "blocking": not active,
-                           "detail": "GET capacities returns only capacities accessible as contributor/admin; preview SKU/region needs review"})
+            adopted_without_capacity_access = bool(identity.workspace_id and capacity is None)
+            status = "PASS" if active else "UNKNOWN" if adopted_without_capacity_access else "FAIL"
+            report.append({"role": role, "check": "capacity_access_active", "status": status,
+                           "blocking": not active and not adopted_without_capacity_access,
+                           "detail": "Adopted workspace capacity is checked directly; creating a workspace requires an active capacity visible as contributor/admin"})
             ctx.clients[role].list("workspaces")
             report.append({"role": role, "check": "workspace_api", "status": "PASS", "blocking": False,
                            "detail": "Read-only access only; no create permission inferred"})
             if identity.workspace_id:
                 workspace = ctx.clients[role].get(f"workspaces/{identity.workspace_id}")
-                valid = workspace.get("type") == "Workspace" and workspace.get("capacityId") == identity.capacity_id
+                valid = (workspace.get("type") == "Workspace"
+                         and live_id(workspace.get("capacityId")) == capacity_id)
                 report.append({"role": role, "check": "adopted_workspace", "status": "PASS" if valid else "FAIL",
                                "blocking": not valid})
         except FabricError:
@@ -197,8 +206,12 @@ def teardown(ctx: Context) -> None:
         if ctx.dry_run:
             continue
         client = ctx.clients[record["role"]]
-        path = (f"workspaces/{record['id']}" if record["kind"] == "Workspace" else
-                f"workspaces/{record['workspace_id']}/items/{record['id']}")
+        if record["kind"] == "Workspace":
+            path = f"workspaces/{record['id']}"
+        elif record["kind"] == "Folder":
+            path = f"workspaces/{record['workspace_id']}/folders/{record['id']}"
+        else:
+            path = f"workspaces/{record['workspace_id']}/items/{record['id']}"
         response = client.request("GET", path, allow_status=(404,))
         if response.status_code == 404:
             ctx.state.removed(key)
@@ -294,15 +307,18 @@ def main(argv: list[str] | None = None, *, preflight_only: bool = False) -> int:
                              shared_consumers=args.allow_shared_consumer_tenant)
         state = State(config.state_path, config.demo_id, dry_run=args.dry_run)
         ctx = Context(config, state, dry_run=args.dry_run)
-        through = args.through_step or args.step or 8
+        through = args.through_step or args.step or config.deployment_through_step
         with ExitStack() as stack:
             if not args.dry_run:
-                from azure.identity import ClientSecretCredential
+                from azure.identity import AzureCliCredential, ClientSecretCredential
 
+                required = ["tenant_id", "capacity_id"]
+                if config.auth_mode == "service_principal":
+                    required += ["client_id", "client_secret"]
                 missing = [
                     {"role": role, "check": key, "status": "FAIL", "blocking": True}
                     for role, identity in config.identities.items()
-                    for key in ("tenant_id", "client_id", "client_secret", "capacity_id")
+                    for key in required
                     if not getattr(identity, key)
                 ]
                 if missing:
@@ -312,11 +328,14 @@ def main(argv: list[str] | None = None, *, preflight_only: bool = False) -> int:
                     )
                 config.validate()
                 for role, identity in config.identities.items():
-                    credential = ClientSecretCredential(
-                        tenant_id=identity.tenant_id, client_id=identity.client_id,
-                        client_secret=identity.client_secret, logging_enable=False,
-                        connection_timeout=15, read_timeout=30, retry_total=2,
-                    )
+                    if config.auth_mode == "azure_cli":
+                        credential = AzureCliCredential(tenant_id=identity.tenant_id)
+                    else:
+                        credential = ClientSecretCredential(
+                            tenant_id=identity.tenant_id, client_id=identity.client_id,
+                            client_secret=identity.client_secret, logging_enable=False,
+                            connection_timeout=15, read_timeout=30, retry_total=2,
+                        )
                     stack.callback(credential.close)
                     ctx.credentials[role] = credential
                     client = FabricClient(
@@ -343,7 +362,7 @@ def main(argv: list[str] | None = None, *, preflight_only: bool = False) -> int:
                         r: {"tenant_id": i.tenant_id, "client_id": i.client_id,
                             "capacity_id": i.capacity_id, "workspace_id": i.workspace_id}
                         for r, i in config.identities.items()
-                    }})
+                    }, "folder_path": list(config.folder_path)})
                 if args.teardown:
                     teardown(ctx)
                 else:

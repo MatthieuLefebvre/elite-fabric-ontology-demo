@@ -57,6 +57,12 @@ class Context:
     def workspace(self, role: str) -> str:
         return self.ref(self.config.workspace_role(role) + ".workspace")
 
+    def folder(self, role: str) -> str | None:
+        if not self.config.folder_path:
+            return None
+        workspace_role = self.config.workspace_role(role)
+        return self.ref(f"{workspace_role}.folder.{len(self.config.folder_path) - 1}")
+
     def adapter(self):
         try:
             return importlib.import_module("fabric.ontology_adapter")
@@ -75,17 +81,69 @@ class Context:
         if not record:
             raise FabricError(f"Missing prerequisite resource {key}")
         client = self.clients[role or record["role"]]
-        path = (f"workspaces/{live_id(record['id'])}" if record["kind"] == "Workspace" else
-                f"workspaces/{live_id(record['workspace_id'])}/items/{live_id(record['id'])}")
+        if record["kind"] == "Workspace":
+            path = f"workspaces/{live_id(record['id'])}"
+        elif record["kind"] == "Folder":
+            path = f"workspaces/{live_id(record['workspace_id'])}/folders/{live_id(record['id'])}"
+        else:
+            path = f"workspaces/{live_id(record['workspace_id'])}/items/{live_id(record['id'])}"
         item = client.get(path)
-        if item.get("id") != record["id"] or item.get("type") != record["kind"]:
+        if item.get("id") != record["id"] or (
+            record["kind"] not in ("Workspace", "Folder") and item.get("type") != record["kind"]
+        ):
             raise FabricError(f"Resource identity/type changed: {key}")
         if item.get("displayName") != record["name"]:
             raise FabricError(f"Resource renamed; explicit reconciliation required: {key}")
-        if record["kind"] != "Workspace" or record["created"]:
+        if record["kind"] == "Folder":
+            actual_parent = item.get("parentFolderId")
+            if actual_parent != record.get("parent_folder_id"):
+                raise FabricError(f"Folder moved; explicit reconciliation required: {key}")
+        elif record["kind"] != "Workspace" or record["created"]:
             if record["marker"] not in item.get("description", ""):
                 raise FabricError(f"Ownership marker missing: {key}")
+        if record.get("folder_id") and item.get("folderId") != record["folder_id"]:
+            raise FabricError(f"Item moved; explicit reconciliation required: {key}")
         return item
+
+    def ensure_folder_path(self, role: str) -> str | None:
+        """Adopt or create the configured nested folder path in one workspace."""
+        if not self.config.folder_path:
+            return None
+        if self.dry_run:
+            raise FabricError("Use declarative plans, not ensure_folder_path, in dry-run")
+        workspace_role = self.config.workspace_role(role)
+        workspace = self.workspace(workspace_role)
+        client = self.clients[workspace_role]
+        folders = client.list(f"workspaces/{workspace}/folders")
+        parent_id = None
+        for index, name in enumerate(self.config.folder_path):
+            key = f"{workspace_role}.folder.{index}"
+            saved = self.state.get(key)
+            if saved:
+                folder = self.validate_record(key)
+                parent_id = live_id(folder["id"])
+                continue
+            matches = [folder for folder in folders
+                       if folder.get("displayName", "").casefold() == name.casefold()
+                       and folder.get("parentFolderId") == parent_id]
+            if len(matches) > 1:
+                raise FabricError("Ambiguous existing folder path")
+            created = not matches
+            if created:
+                body = {"displayName": name}
+                if parent_id:
+                    body["parentFolderId"] = parent_id
+                self.state.begin(key, action="create", role=workspace_role)
+                folder = client.mutate("POST", f"workspaces/{workspace}/folders", body,
+                                       on_response=lambda response, key=key: self.state.receipt(key, response))
+                folders.append(folder)
+            else:
+                folder = matches[0]
+            parent_id = live_id(folder.get("id"))
+            self.state.record(key, resource_id=parent_id, role=workspace_role, kind="Folder",
+                              name=name, workspace_id=workspace, created=created,
+                              parent_folder_id=folder.get("parentFolderId"))
+        return parent_id
 
     def require_lakehouse(self, key: str, *, role: str | None = None) -> dict:
         item = self.validate_record(key, role=role)
@@ -103,6 +161,7 @@ class Context:
         if self.dry_run:
             raise FabricError("Use declarative plans, not ensure_item, in dry-run")
         workspace = self.workspace(role)
+        folder_id = self.folder(role)
         client = self.clients[role]
         saved = self.state.get(key)
         if key in self.state.data["pending"]:
@@ -114,7 +173,8 @@ class Context:
             item_id = saved["id"]
         else:
             matches = [i for i in client.list(f"workspaces/{workspace}/items")
-                       if i.get("displayName", "").casefold() == name.casefold()]
+                       if i.get("displayName", "").casefold() == name.casefold()
+                       and i.get("folderId") == folder_id]
             if len(matches) > 1:
                 raise FabricError("Ambiguous existing item name")
             if matches:
@@ -123,9 +183,12 @@ class Context:
                     raise FabricError("Existing item has wrong type or ownership marker; not modifying")
                 item_id = live_id(item["id"])
                 self.state.record(key, resource_id=item_id, role=role, kind=kind,
-                                  name=name, workspace_id=workspace, created=False)
+                                  name=name, workspace_id=workspace, created=False,
+                                  folder_id=folder_id)
             else:
                 body = {"displayName": name, "description": self.state.marker(key)}
+                if folder_id:
+                    body["folderId"] = folder_id
                 if definition is not None:
                     body["definition"] = validate_definition(definition)
                 self.state.begin(key, action="create", role=role)
@@ -135,7 +198,8 @@ class Context:
                 if item.get("type") != kind:
                     raise FabricError("Create result type mismatch; reconcile pending intent")
                 self.state.record(key, resource_id=item_id, role=role, kind=kind,
-                                  name=name, workspace_id=workspace, created=True)
+                                  name=name, workspace_id=workspace, created=True,
+                                  folder_id=folder_id)
                 return item_id
         if definition is not None:
             self.state.begin(key, action="updateDefinition", role=role)

@@ -1,7 +1,7 @@
 """Compile a portable contract to the documented Fabric ontology definition (REST v1).
 
 No network calls, deployment claims, or guessed API fields. Public contract checked
-2026-09-04; preview service acceptance and caller-level security need live verification.
+2026-09-07; preview service acceptance and caller-level security need live verification.
 Logical IDs are tenant-independent; physical binding UUIDs are workspace/item-specific.
 """
 
@@ -314,7 +314,7 @@ def required_gold_tables(contract: Contract) -> list[str]:
 
 def _part(path: str, value: dict) -> dict[str, str]:
     """Encode deterministic UTF-8 JSON into a documented InlineBase64 part."""
-    payload = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    payload = json.dumps(value, ensure_ascii=False, separators=(",", ":"))
     return {
         "path": path, "payload": base64.b64encode(payload.encode()).decode("ascii"),
         "payloadType": "InlineBase64",
@@ -333,6 +333,38 @@ def _guid(value: str, label: str) -> str:
 
 
 # VERIFY: ONTOLOGY_V1 — confirm preview property/binding types and graph refresh in target tenant.
+def property_description(entity: str, name: str, definition: dict) -> str:
+    """Describe property units and business roles using the portable Gold contract."""
+    authored = definition.get("description")
+    if authored:
+        return authored
+    meanings = {
+        "responsible_partner_id": "Partner accountable for delivery; distinct from billing and originating partners.",
+        "billing_partner_id": "Partner accountable for billing decisions, not necessarily delivery or origination.",
+        "originating_partner_id": "Partner credited with originating the engagement, not its access authority.",
+        "parent_matter_id": "Parent engagement reference; neither access grants nor financial rollups are inherited.",
+        "currency": "Recorded ISO currency. Group money by currency; no FX conversion or mixed-currency totals.",
+        "net_time_cents": "Issued net time fees excluding costs; realization numerator. Later write-offs do not change it.",
+        "standard_time_cents": "Standard time value for this invoice's work; issued realization denominator.",
+        "stage": "Exclusive fee reduction stage: time_entry, proforma review, or post-issue invoice write-off.",
+        "value_cents": "Recorded negotiated time value before review reductions, in integer cents.",
+        "billable_flag": "Whether recorded work is billable. Draft allocation alone does not remove it from WIP.",
+        "budgeted_fees_cents": "Full approved quarter fee plan for this matter, phase and currency; not prorated.",
+        "phase": "Work phase used to match actual time to budget without duplicating whole-matter plans.",
+        "invoice_id": "Invoice reference; only an issued invoice removes allocated work from operational WIP.",
+    }
+    if name in meanings:
+        return meanings[name]
+    label = name.replace("_", " ")
+    if name.endswith("_cents"):
+        return f"{entity} {label}, stored as exact integer cents in the row currency; divide by 100 for display."
+    if name.endswith("_id"):
+        return f"Stable {label} reference on {entity}; a reference is not an authorization grant."
+    if definition["type"] in ("date", "timestamp"):
+        return f"{entity} {label}, bound from Gold column {definition['column']}; interpret at the dataset snapshot."
+    return f"{entity} {label}, bound from Gold column {definition['column']}."
+
+
 def build_ontology_definition(
     contract: Contract, workspace_id: str, lakehouse_id: str, display_name: str,
 ) -> dict:
@@ -370,9 +402,11 @@ def build_ontology_definition(
             "name": name, "entityIdParts": [_property_id(name, entity["key"])],
             "displayNamePropertyId": _property_id(name, entity["display_name"]),
             "visibility": "Visible",
+              "semanticEnrichment": {"description": entity["description"]},
             "properties": [
                 {"id": _property_id(name, prop), "name": prop,
-                 "valueType": fabric_value_type(definition["type"])}
+                  "valueType": fabric_value_type(definition["type"]),
+                  "semanticEnrichment": {"description": property_description(name, prop, definition)}}
                 for prop, definition in sorted(properties.items())
             ],
             "timeseriesProperties": [],
@@ -398,6 +432,7 @@ def build_ontology_definition(
             "id": relation_id, "namespace": "usertypes", "namespaceType": "Custom",
             "name": name, "source": {"entityTypeId": _logical_id("entity", source)},
             "target": {"entityTypeId": _logical_id("entity", target)},
+            "semanticEnrichment": {"description": relation["label"]},
         }))
         binding = binding_id("relationship", name)
         table = relation.get("edge_table", relation["table"])
@@ -441,8 +476,8 @@ def build_agent_instructions(contract: Contract, instructions: str = "") -> str:
     """Enrich user-authored instructions with all source-of-truth business semantics.
 
     This portable guide does not configure a datasource, persist native measures or
-    enforce access. Preserve descriptions here because public ontology JSON has no
-    description/measure DSL fields. Return plain text for a verified agent integration.
+    enforce access. Native semanticEnrichment carries descriptions; this guide also
+    preserves portable measure SQL. Return plain text for a verified agent integration.
     """
     validate_contract(contract)
     metadata = copy.deepcopy({

@@ -109,6 +109,35 @@ def test_workspace_live_request_capacity_and_three_ids(tmp_path):
             api.close()
 
 
+def test_workspace_adoption_compares_capacity_ids_case_insensitively(tmp_path):
+    cfg = config(tmp_path)
+    workspace_ids = {"provider": WS, "harbor": ITEM, "kestrel": TENANTS["provider"]}
+    identities = {
+        role: replace(identity, capacity_id=CAP.upper(), workspace_id=workspace_ids[role])
+        for role, identity in cfg.identities.items()
+    }
+    cfg = replace(cfg, identities=identities)
+    state = State(cfg.state_path, cfg.demo_id)
+
+    def handler(request):
+        if "/workspaces/" in request.url.path:
+            workspace_id = request.url.path.rsplit("/", 1)[-1]
+            return httpx.Response(200, json={
+                "id": workspace_id, "type": "Workspace", "displayName": "existing",
+                "capacityId": CAP.lower(),
+            })
+        return httpx.Response(200, json={"value": []})
+
+    clients = {role: mock_client(handler, role) for role in cfg.identities}
+    try:
+        with state.locked():
+            workspaces(Context(cfg, state, clients=clients))
+        assert state.data["resources"]["provider.workspace"]["created"] is False
+    finally:
+        for client in clients.values():
+            client.close()
+
+
 def test_normal_three_workspaces_and_tenants(tmp_path):
     cfg = config(tmp_path)
     cfg.validate()
@@ -161,6 +190,15 @@ def test_state_lock_and_fake_id_protection(tmp_path):
                          name="fake", created=True)
 
 
+def test_completed_write_receipt_ignores_non_polling_location(tmp_path):
+    state = State(tmp_path / "state.json", "elite_demo")
+    with state.locked():
+        state.begin("workspace", action="create", role="provider")
+        response = httpx.Response(201, headers={"Location": "https://regional.example/workspace"})
+        state.receipt("workspace", response)
+    assert "location" not in state.data["pending"]["workspace"]
+
+
 def test_reuse_validates_type_marker_and_never_claims_creation(tmp_path):
     cfg = config(tmp_path)
     state = State(cfg.state_path, cfg.demo_id)
@@ -183,6 +221,50 @@ def test_reuse_validates_type_marker_and_never_claims_creation(tmp_path):
                                    collection="lakehouses", name="bronze") == ITEM
             assert state.get("provider.bronze")["created"] is False
         assert all(r.method == "GET" for r in calls)
+    finally:
+        api.close()
+
+
+def test_nested_folder_path_adopts_parents_and_places_items(tmp_path):
+    cfg = replace(config(tmp_path), folder_path=("Dev", "Matthieu", "Elite"))
+    state = State(cfg.state_path, cfg.demo_id)
+    calls = []
+    folder_ids = iter((TENANTS["harbor"], TENANTS["kestrel"]))
+
+    def handler(request):
+        calls.append(request)
+        if request.method == "GET" and request.url.path.endswith("/folders"):
+            return httpx.Response(200, json={"value": [{
+                "id": TENANTS["provider"], "workspaceId": WS, "displayName": "Dev",
+            }]})
+        if request.method == "GET" and request.url.path.endswith("/items"):
+            return httpx.Response(200, json={"value": []})
+        body = json.loads(request.content)
+        if request.url.path.endswith("/folders"):
+            return httpx.Response(201, json={
+                "id": next(folder_ids), "workspaceId": WS,
+                "displayName": body["displayName"], "parentFolderId": body["parentFolderId"],
+            })
+        assert body["folderId"] == TENANTS["kestrel"]
+        return httpx.Response(201, json={
+            "id": ITEM, "type": "Lakehouse", "displayName": "bronze",
+            "description": state.marker("provider.bronze"), "folderId": body["folderId"],
+        })
+
+    api = mock_client(handler)
+    try:
+        with state.locked():
+            seed_workspace(state)
+            ctx = Context(cfg, state, clients={"provider": api})
+            assert ctx.ensure_folder_path("provider") == TENANTS["kestrel"]
+            assert ctx.ensure_item(key="provider.bronze", role="provider", kind="Lakehouse",
+                                   collection="lakehouses", name="bronze") == ITEM
+        folder_posts = [request for request in calls
+                        if request.method == "POST" and request.url.path.endswith("/folders")]
+        assert len(folder_posts) == 2
+        assert state.get("provider.folder.0")["created"] is False
+        assert state.get("provider.folder.2")["created"] is True
+        assert state.get("provider.bronze")["folder_id"] == TENANTS["kestrel"]
     finally:
         api.close()
 
@@ -391,6 +473,38 @@ def test_core_preflight_read_only_admin_unknown_not_pass(tmp_path):
     finally:
         for api in clients.values():
             api.close()
+
+
+def test_preflight_allows_unlisted_capacity_only_for_adopted_workspace(tmp_path):
+    cfg = config(tmp_path)
+    provider = replace(cfg.identities["provider"], workspace_id=WS)
+    cfg = replace(cfg, identities={**cfg.identities, "provider": provider})
+
+    def handler(request):
+        if request.url.path.endswith("/capacities"):
+            return httpx.Response(200, json={"value": []})
+        if request.url.path.endswith("/workspaces/" + WS):
+            return httpx.Response(200, json={
+                "id": WS, "type": "Workspace", "capacityId": CAP,
+            })
+        return httpx.Response(200, json={"value": []})
+
+    clients = {role: mock_client(handler, role) for role in TENANTS}
+    ctx = Context(cfg, State(cfg.state_path, cfg.demo_id), clients=clients,
+                  credentials={role: SimpleNamespace(get_token=lambda scope: "mock") for role in TENANTS})
+    try:
+        report = preflight(ctx, through_step=2, local_inputs=False)
+        provider_capacity = next(row for row in report
+                                 if row.get("role") == "provider"
+                                 and row["check"] == "capacity_access_active")
+        harbor_capacity = next(row for row in report
+                               if row.get("role") == "harbor"
+                               and row["check"] == "capacity_access_active")
+        assert provider_capacity["status"] == "UNKNOWN" and not provider_capacity["blocking"]
+        assert harbor_capacity["status"] == "FAIL" and harbor_capacity["blocking"]
+    finally:
+        for client in clients.values():
+            client.close()
 
 
 def test_unattested_core_preflight_blocks(tmp_path):

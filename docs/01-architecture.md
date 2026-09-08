@@ -96,9 +96,10 @@ IDs are tenant-independent; binding IDs depend on the target workspace and lakeh
 Gold evaluates expressions against original rows and binds concrete projected columns.
 Filtered edge tables express nullable/stage-specific business links, not security.
 
-Portable measures and rich descriptions are **not native deployed Fabric ontology
-measures**. The public definition has no corresponding measure DSL. The adapter
-keeps those semantics in SQL and instructions rather than inventing REST fields.
+Portable measures are **not native deployed Fabric ontology measures**. The public
+definition has no corresponding measure DSL, so measure SQL remains in the portable
+contract and instructions. Entity, property, and relationship descriptions now use
+the documented native `semanticEnrichment` metadata.
 Financial arithmetic uses integer cents and decimal accumulation in Gold; the public
 graph's Double projection is not an exact-money calculation engine. Always group
 money by firm and currency: USD and GBP are not added without an explicit FX model.

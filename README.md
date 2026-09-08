@@ -96,8 +96,9 @@ than independent consumer tenants; neither proves partner-level authorization.
 
 The setup wrappers require **Python 3.11 or newer** and Git.
 Live use requires paid **F2 or higher** Fabric capacity in a supported region, capacity assignment
-rights, tenant-approved service principals, separate customer identities, and appropriate
-Fabric and Microsoft 365 entitlements for the chosen experience. F2 eligibility does
+rights, approved deployment identities, separate customer identities, and appropriate
+Fabric and Microsoft 365 entitlements for the chosen experience. Attended single-tenant
+workshops may explicitly use the signed-in Azure CLI user. F2 eligibility does
 not certify ontology/Graph availability. See [the deployment guide](docs/03-deployment-guide.md)
 for the permission matrix, tenant settings, preview contracts, and blocking checks.
 
@@ -133,6 +134,9 @@ copy `.env.example` to `.env`, configure tenant-owned credentials privately, and
 ./.venv/Scripts/python.exe fabric/deploy.py --config .env
 ```
 
+The dotenv file may set `DEPLOYMENT_TOPOLOGY` and `DEPLOYMENT_THROUGH_STEP`, allowing
+these exact commands to retain an explicitly selected topology and supported boundary.
+
 Use `--single-tenant-simulation` only for a clearly labeled workshop simulation. A
 preflight that reports UNKNOWN or FAIL is not permission to claim a working live demo.
 Full live mode intentionally blocks before resource creation. Explicitly selecting
@@ -153,9 +157,15 @@ grammar is narrower than a general natural-language judge.
 Neither is independent agent evidence. Reports can have `all_passed=true` offline,
 but `live_readiness=false` remains mandatory, even after three successful delegated
 live sweeps, because raw-graph authorization and portal/Word proof are not certified.
-The local validation suite has **296 passing tests** on Python 3.12.10, and Ruff is clean. Both notebooks
-pass format and syntax checks; they have not been executed on Fabric Spark. No live
-tenant, deployed-agent, or Word result is claimed.
+Core steps 1-4 have now completed in the configured single-tenant simulation,
+including all four live Spark transformation jobs. Both firms also have live Direct
+Lake models, Power BI reports with source-checked financial totals, queryable
+ontologies, and ontology-backed data-agent definitions. Harbor is published and its
+authenticated MCP endpoint has answered an exploratory query. Kestrel MCP publication,
+full delegated evaluation, visual certification, partner authorization, Microsoft 365
+Agent Store publication, and Word integration remain incomplete. See the
+[analytics deployment status](docs/06-analytics-demo.md) for report links, MCP setup,
+reproducible commands, and exact remaining blockers.
 
 ## Repository tour
 

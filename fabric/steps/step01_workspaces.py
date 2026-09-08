@@ -17,7 +17,7 @@ def run(ctx: Context) -> None:
         saved = ctx.state.get(key)
         if saved:
             workspace = ctx.validate_record(key)
-            if workspace.get("capacityId") != identity.capacity_id:
+            if live_id(workspace.get("capacityId")) != live_id(identity.capacity_id):
                 raise FabricError("Saved workspace has a different capacity; not reassigning")
             continue
         if key in ctx.state.data["pending"]:
@@ -34,7 +34,7 @@ def run(ctx: Context) -> None:
         if workspace:
             if workspace.get("type") != "Workspace":
                 raise FabricError("Existing resource is not a regular Workspace")
-            if workspace.get("capacityId") != identity.capacity_id:
+            if live_id(workspace.get("capacityId")) != live_id(identity.capacity_id):
                 raise FabricError("Existing workspace capacity mismatch; not modifying")
             if not adopted and ctx.state.marker(key) not in workspace.get("description", ""):
                 raise FabricError("Existing-name workspace lacks deployment ownership marker")

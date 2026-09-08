@@ -12,7 +12,7 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
-from fabric.fabric_client import FabricError, live_id, request_id, trusted_url
+from fabric.fabric_client import FabricError, live_id, operation_url, request_id
 
 
 class State:
@@ -103,8 +103,8 @@ class State:
     def receipt(self, key: str, response) -> None:
         """Persist only trusted polling coordinates/UUIDs for manual crash recovery."""
         pending = self.data["pending"][key]
-        if response.headers.get("Location"):
-            location = trusted_url(response.headers["Location"])
+        if response.status_code == 202:
+            location = operation_url(response)
             if "?" in location:
                 raise FabricError("Unexpected query-bearing operation Location; reconcile manually")
             pending["location"] = location
@@ -114,7 +114,8 @@ class State:
         self.save()
 
     def record(self, key: str, *, resource_id: str, role: str, kind: str,
-               name: str, created: bool, workspace_id: str | None = None) -> dict:
+               name: str, created: bool, workspace_id: str | None = None,
+               parent_folder_id: str | None = None, folder_id: str | None = None) -> dict:
         if self.dry_run:
             raise FabricError("Dry-run IDs must not enter the ownership journal")
         resource_id = live_id(resource_id)
@@ -123,6 +124,10 @@ class State:
             raise FabricError("Refusing to change recorded resource ownership")
         record = {"id": resource_id, "role": role, "kind": kind, "name": name,
                   "created": created, "workspace_id": workspace_id, "marker": self.marker(key)}
+        if parent_folder_id is not None:
+            record["parent_folder_id"] = live_id(parent_folder_id)
+        if folder_id is not None:
+            record["folder_id"] = live_id(folder_id)
         self.data["resources"][key] = record
         self.data["pending"].pop(key, None)
         self.save()

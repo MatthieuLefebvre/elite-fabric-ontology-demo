@@ -145,16 +145,19 @@ def test_public_entity_definition_and_binding_shapes(contract: dict) -> None:
         assert set(definition) == {
             "id", "namespace", "namespaceType", "name", "entityIdParts",
             "displayNamePropertyId", "visibility", "properties", "timeseriesProperties",
+            "semanticEnrichment",
         }
         assert definition["namespace"] == "usertypes"
         assert definition["namespaceType"] == "Custom"
+        assert len(definition["semanticEnrichment"]["description"]) > 80
         assert definition["visibility"] == "Visible" and definition["timeseriesProperties"] == []
         prop_ids = {prop["id"] for prop in definition["properties"]}
         assert set(definition["entityIdParts"]) <= prop_ids
         assert definition["displayNamePropertyId"] in prop_ids
         logical_ids.append(definition["id"])
         for prop in definition["properties"]:
-            assert set(prop) == {"id", "name", "valueType"}
+            assert set(prop) == {"id", "name", "valueType", "semanticEnrichment"}
+            assert len(prop["semanticEnrichment"]["description"]) > 20
             assert prop["valueType"] in {"String", "Boolean", "DateTime", "Object", "BigInt", "Double"}
             logical_ids.append(prop["id"])
         prefix = f"EntityTypes/{definition['id']}/DataBindings/"
@@ -164,6 +167,8 @@ def test_public_entity_definition_and_binding_shapes(contract: dict) -> None:
         assert set(binding) == {"id", "dataBindingConfiguration"}
         assert UUID(binding["id"]).version == 5
         config = binding["dataBindingConfiguration"]
+        assert next(iter(config)) == "dataBindingType"
+        assert next(iter(config["sourceTableProperties"])) == "sourceType"
         assert set(config) == {"dataBindingType", "propertyBindings", "sourceTableProperties"}
         assert config["dataBindingType"] == "NonTimeSeries"
         assert {p["targetPropertyId"] for p in config["propertyBindings"]} == prop_ids
@@ -184,9 +189,10 @@ def test_contextualizations_reference_actual_endpoint_keys(contract: dict) -> No
     for path, definition in parts.items():
         if not path.startswith("RelationshipTypes/") or not path.endswith("/definition.json"):
             continue
-        assert set(definition) == {"id", "namespace", "namespaceType", "name", "source", "target"}
+        assert set(definition) == {"id", "namespace", "namespaceType", "name", "source", "target", "semanticEnrichment"}
         assert 0 < int(definition["id"]) <= 2**63 - 1
         relation = relations[definition["name"]]
+        assert definition["semanticEnrichment"]["description"] == relation["label"]
         prefix = f"RelationshipTypes/{definition['id']}/Contextualizations/"
         bindings = [v for p, v in parts.items() if p.startswith(prefix)]
         assert len(bindings) == 1
@@ -205,10 +211,8 @@ def test_contextualizations_reference_actual_endpoint_keys(contract: dict) -> No
                 "targetPropertyId": entity["entityIdParts"][0],
             }]
     assert len(parts) == 2 + 2 * len(entities) + 2 * len(relations)
-    # Descriptions, portable cardinality, expressions and relationship attributes
-    # must NOT be smuggled into a public part or pretend to be a measure DSL.
     serialized = json.dumps(parts)
-    for forbidden in ("sourceSchema", '"attributes"', '"description"', '"measures"',
+    for forbidden in ("sourceSchema", '"attributes"', '"measures"',
                       '"cardinality"', '"expression"', '"filter"'):
         assert forbidden not in serialized
 
